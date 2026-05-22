@@ -56,7 +56,6 @@ def load_pipeline(progress_callback=None):
         _pipeline = AutoPipelineForText2Image.from_pretrained(
             "Tongyi-MAI/Z-Image-Turbo",
             torch_dtype=dtype,
-            variant="fp16" if device == "cuda" else None,
         )
 
         if device == "cuda":
