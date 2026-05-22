@@ -17,6 +17,22 @@
       "icon": "💎"
     },
     {
+      "name": "Adobe Stock Sticker/Clipart",
+      "master_negative": "gradients, shading, blurry, noisy, shadows, texture, text, watermark, complex detailed background, photograph, realistic photo, 3d render",
+      "prompt_enhancement": "die-cut sticker design, clean white border, cute clipart asset, flat color vector illustration, isolated white background, commercial graphic asset, clean paths, vector patch, high contrast",
+      "default_transparent": true,
+      "default_aspect_ratio": "1024*1024",
+      "icon": "🏷️"
+    },
+    {
+      "name": "Adobe Stock Seamless Pattern",
+      "master_negative": "photograph, realistic, 3d render, blurry, noisy, text, watermark, border, frame, edges, asymmetric, non-repeating",
+      "prompt_enhancement": "seamless repeating pattern, vector illustration tile, beautiful continuous design element, isolated motif, commercial textile backdrop, flat design, high resolution, symmetrical tileable",
+      "default_transparent": false,
+      "default_aspect_ratio": "1024*1024",
+      "icon": "🌀"
+    },
+    {
       "name": "Logo",
       "master_negative": "photograph, realistic photo, 3d render, blurry, noisy, text artifacts, watermark, human, person, face, body, animal, landscape, complex background, gradient background",
       "prompt_enhancement": "minimalist logo design, flat vector style, scalable, clean lines, professional branding, centered composition, high contrast",
