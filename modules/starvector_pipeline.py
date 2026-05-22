@@ -22,7 +22,14 @@ def load_model(progress_cb=None):
     dev = "cuda" if torch.cuda.is_available() else "cpu"
     dt = torch.float16 if dev == "cuda" else torch.float32
     _processor = AutoProcessor.from_pretrained(MODEL_ID, cache_dir=CACHE_DIR, trust_remote_code=True)
-    _model = AutoModelForCausalLM.from_pretrained(MODEL_ID, cache_dir=CACHE_DIR, torch_dtype=dt, trust_remote_code=True).to(dev)
+    _model = AutoModelForCausalLM.from_pretrained(
+        MODEL_ID,
+        cache_dir=CACHE_DIR,
+        torch_dtype=dt,
+        trust_remote_code=True,
+        low_cpu_mem_usage=True,
+        device_map="auto"
+    )
     _model.eval()
     if progress_cb: progress_cb("StarVector-1B loaded!")
     return _model, _processor
