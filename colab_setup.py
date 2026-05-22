@@ -22,7 +22,7 @@ def setup_and_launch(share=True, use_ngrok=False, ngrok_token=None):
     # Check if already cloned
     if not os.path.exists('Fooocus-Design-Tool'):
         print("\n📦 Cloning repository...")
-        subprocess.run(['git', 'clone', 'https://github.com/YOUR_USERNAME/Fooocus-Design-Tool.git'], check=True)
+        subprocess.run(['git', 'clone', 'https://github.com/NiL4gh/Fooocus-Design-Tool.git'], check=True)
     
     os.chdir('Fooocus-Design-Tool')
 
