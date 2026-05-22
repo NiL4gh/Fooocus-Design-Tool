@@ -1,6 +1,6 @@
 """
 Z-Image-Turbo Pipeline Module
-Primary raster generation engine using TIGER-Lab/Z-Image-Turbo via HuggingFace diffusers.
+Primary raster generation engine using Tongyi-MAI/Z-Image-Turbo via HuggingFace diffusers.
 Optimized for T4 GPU (15GB VRAM) with FP16 and CPU offloading.
 """
 
@@ -54,7 +54,7 @@ def load_pipeline(progress_callback=None):
             progress_callback("Downloading model from HuggingFace...")
 
         _pipeline = AutoPipelineForText2Image.from_pretrained(
-            "TIGER-Lab/Z-Image-Turbo",
+            "Tongyi-MAI/Z-Image-Turbo",
             torch_dtype=dtype,
             variant="fp16" if device == "cuda" else None,
         )
