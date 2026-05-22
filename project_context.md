@@ -1,0 +1,2 @@
+"# Fooocus Design Tool — Project Context\n\n## Overview\nStripped-down fork of [Fooocus](https://github.com/lllyasviel/Fooocus) transformed into a specialized graphic design asset generator.\n\n## Architecture Decisions\n\n### 1. Engine: Z-Image-Turbo (N
+<truncated 3348 bytes>

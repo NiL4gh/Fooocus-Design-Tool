@@ -1,0 +1,92 @@
+{
+  "categories": [
+    {
+      "name": "Adobe Stock Silhouette",
+      "master_negative": "color, grayscale, shading, shadows, realistic, photograph, 3d render, blurry, noisy, text, watermark, background textures, complex details, gradient background",
+      "prompt_enhancement": "isolated solid black silhouette, flat design, clean vector style, sharp edges, high contrast, minimalist, clean SVG path vector, clip art, graphic asset, professional commercial asset",
+      "default_transparent": true,
+      "default_aspect_ratio": "1024*1024",
+      "icon": "👤"
+    },
+    {
+      "name": "Adobe Stock Flat Vector",
+      "master_negative": "photograph, realistic photo, 3d render, gradients, shading, blurry, noisy, shadows, texture, text, watermark, human face, complex detailed background",
+      "prompt_enhancement": "flat minimalist vector graphic, clean vector style, solid colors, smooth clean outlines, isolated, commercial graphic asset, Adobe Stock style vector, scalable graphic element, 2d illustration",
+      "default_transparent": true,
+      "default_aspect_ratio": "1024*1024",
+      "icon": "💎"
+    },
+    {
+      "name": "Logo",
+      "master_negative": "photograph, realistic photo, 3d render, blurry, noisy, text artifacts, watermark, human, person, face, body, animal, landscape, complex background, gradient background",
+      "prompt_enhancement": "minimalist logo design, flat vector style, scalable, clean lines, professional branding, centered composition, high contrast",
+      "default_transparent": true,
+      "default_aspect_ratio": "1024*1024",
+      "icon": "🎯"
+    },
+    {
+      "name": "Poster",
+      "master_negative": "low quality, blurry, pixelated, watermark, text artifacts, deformed, ugly, bad anatomy, cropped",
+      "prompt_enhancement": "professional poster design, high resolution, print quality, graphic design, vivid colors, bold composition, editorial layout",
+      "default_transparent": false,
+      "default_aspect_ratio": "768*1280",
+      "icon": "📰"
+    },
+    {
+      "name": "Banner",
+      "master_negative": "low quality, blurry, pixelated, watermark, text artifacts, deformed, cropped edges",
+      "prompt_enhancement": "web banner design, wide format, professional, clean layout, modern design, digital marketing, high resolution",
+      "default_transparent": false,
+      "default_aspect_ratio": "1536*640",
+      "icon": "🖼️"
+    },
+    {
+      "name": "Vector Silhouette",
+      "master_negative": "photograph, realistic, 3d render, blurry, noisy, watermark, complex shading, gradients, texture, detailed background",
+      "prompt_enhancement": "black silhouette on white background, clean vector style, flat design, sharp edges, minimalist, icon design, scalable graphic",
+      "default_transparent": true,
+      "default_aspect_ratio": "1024*1024",
+      "icon": "✂️"
+    },
+    {
+      "name": "Artwork",
+      "master_negative": "low quality, blurry, watermark, text, deformed, ugly, bad composition, amateur",
+      "prompt_enhancement": "professional digital artwork, high quality illustration, detailed, artistic, beautiful composition, vibrant colors, concept art quality",
+      "default_transparent": false,
+      "default_aspect_ratio": "1024*1024",
+      "icon": "🎨"
+    },
+    {
+      "name": "Stock Image",
+      "master_negative": "blurry, low quality, watermark, text overlay, deformed, ugly, bad anatomy, distorted, amateur photography",
+      "prompt_enhancement": "professional stock photography style, high resolution, commercial quality, well-lit, clean composition, editorial quality, authentic",
+      "default_transparent": false,
+      "default_aspect_ratio": "1152*896",
+      "icon": "📷"
+    },
+    {
+      "name": "Stock Image Mockup",
+      "master_negative": "blurry, low quality, watermark, deformed, ugly, unrealistic lighting, amateur",
+      "prompt_enhancement": "professional product mockup, studio photography, clean background, commercial quality, realistic lighting, professional presentation",
+      "default_transparent": false,
+      "default_aspect_ratio": "1024*1024",
+      "icon": "📦"
+    },
+    {
+      "name": "Edit Design/Photo",
+      "master_negative": "",
+      "prompt_enhancement": "",
+      "default_transparent": false,
+      "default_aspect_ratio": "1024*1024",
+      "icon": "✏️"
+    },
+    {
+      "name": "Variation",
+      "master_negative": "",
+      "prompt_enhancement": "",
+      "default_transparent": false,
+      "default_aspect_ratio": "1024*1024",
+      "icon": "🔄"
+    }
+  ]
+}
