@@ -59,7 +59,7 @@ def load_pipeline(progress_callback=None):
             progress_callback("Downloading model from HuggingFace...")
 
         _pipeline = AutoPipelineForText2Image.from_pretrained(
-            "Tongyi-MAI/Z-Image-Turbo",
+            "ykarout/Z-Image-Turbo-FP8-Full",
             torch_dtype=dtype,
             low_cpu_mem_usage=True,
         )
