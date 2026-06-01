@@ -16,6 +16,11 @@ def load_model(progress_cb=None):
     global _model, _processor
     if _model is not None:
         return _model, _processor
+    if os.environ.get("MOCK_IMAGE_GEN") == "1":
+        _model = "mock_model"
+        _processor = "mock_processor"
+        if progress_cb: progress_cb("[Mock] StarVector-1B loaded!")
+        return _model, _processor
     if progress_cb: progress_cb("Downloading StarVector-1B (first use, ~2-3 min)...")
     from transformers import AutoModelForCausalLM, AutoProcessor
     os.makedirs(CACHE_DIR, exist_ok=True)
@@ -35,6 +40,19 @@ def load_model(progress_cb=None):
     return _model, _processor
 
 def image_to_svg(image, progress_cb=None):
+    if os.environ.get("MOCK_IMAGE_GEN") == "1":
+        if progress_cb: progress_cb("[Mock] Vectorizing to SVG...")
+        return """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <rect width="100" height="100" rx="15" fill="#1e1e2f" />
+  <circle cx="50" cy="50" r="30" fill="url(#grad)" stroke="#ff79c6" stroke-width="2" />
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#8be9fd;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#bd93f9;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <text x="50" y="55" font-family="sans-serif" font-size="8" fill="#f8f8f2" text-anchor="middle">MOCK SVG LOGO</text>
+</svg>"""
     model, proc = load_model(progress_cb)
     if progress_cb: progress_cb("Vectorizing to SVG...")
     dev = next(model.parameters()).device
