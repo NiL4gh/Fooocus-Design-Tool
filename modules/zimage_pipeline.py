@@ -64,17 +64,61 @@ def load_pipeline(model_name="FLUX.1-schnell", progress_callback=None):
         device = get_device()
 
         if model_name == "FLUX.1-schnell":
-            from diffusers import FluxPipeline
-            dtype = torch.float8_e4m3fn if device == "cuda" else torch.float32
-            if progress_callback:
-                progress_callback("Downloading FLUX.1-schnell model from HuggingFace...")
+            if device == "cuda":
+                from transformers import T5EncoderModel, BitsAndBytesConfig
+                from diffusers import FluxTransformer2DModel, FluxPipeline
 
-            _pipeline = FluxPipeline.from_pretrained(
-                "black-forest-labs/FLUX.1-schnell",
-                torch_dtype=dtype,
-                low_cpu_mem_usage=True,
-                device_map="balanced" if device == "cuda" else None,
-            )
+                if progress_callback:
+                    progress_callback("Loading quantized FLUX.1-schnell text encoder (4-bit)...")
+
+                quant_config = BitsAndBytesConfig(
+                    load_in_4bit=True,
+                    bnb_4bit_quant_type="nf4",
+                    bnb_4bit_use_double_quant=True,
+                    bnb_4bit_compute_dtype=torch.float16
+                )
+                
+                text_encoder_2 = T5EncoderModel.from_pretrained(
+                    "black-forest-labs/FLUX.1-schnell",
+                    subfolder="text_encoder_2",
+                    quantization_config=quant_config,
+                    torch_dtype=torch.float16,
+                    low_cpu_mem_usage=True
+                )
+
+                if progress_callback:
+                    progress_callback("Loading quantized FLUX.1-schnell transformer (4-bit)...")
+
+                transformer = FluxTransformer2DModel.from_pretrained(
+                    "black-forest-labs/FLUX.1-schnell",
+                    subfolder="transformer",
+                    quantization_config=quant_config,
+                    torch_dtype=torch.float16,
+                    low_cpu_mem_usage=True
+                )
+
+                if progress_callback:
+                    progress_callback("Assembling FLUX.1-schnell pipeline...")
+
+                _pipeline = FluxPipeline.from_pretrained(
+                    "black-forest-labs/FLUX.1-schnell",
+                    text_encoder_2=text_encoder_2,
+                    transformer=transformer,
+                    torch_dtype=torch.float16,
+                    device_map="balanced",
+                )
+                dtype = torch.float16
+            else:
+                from diffusers import FluxPipeline
+                dtype = torch.float32
+                if progress_callback:
+                    progress_callback("Downloading FLUX.1-schnell model on CPU...")
+
+                _pipeline = FluxPipeline.from_pretrained(
+                    "black-forest-labs/FLUX.1-schnell",
+                    torch_dtype=dtype,
+                    low_cpu_mem_usage=True,
+                )
         else:  # Z-Image-Turbo
             from diffusers import AutoPipelineForText2Image
             dtype = torch.bfloat16 if device == "cuda" else torch.float32
