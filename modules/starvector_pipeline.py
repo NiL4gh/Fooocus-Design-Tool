@@ -21,7 +21,11 @@ def load_model(progress_cb=None):
         _processor = "mock_processor"
         if progress_cb: progress_cb("[Mock] StarVector-1B loaded!")
         return _model, _processor
-    if progress_cb: progress_cb("Downloading StarVector-1B (first use, ~2-3 min)...")
+    # Clear memory before loading StarVector
+    gc.collect()
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+
     from transformers import AutoModelForCausalLM, AutoProcessor
     os.makedirs(CACHE_DIR, exist_ok=True)
     dev = "cuda" if torch.cuda.is_available() else "cpu"
@@ -33,7 +37,7 @@ def load_model(progress_cb=None):
         torch_dtype=dt,
         trust_remote_code=True,
         low_cpu_mem_usage=True,
-        device_map="auto"
+        device_map=dev
     )
     _model.eval()
     if progress_cb: progress_cb("StarVector-1B loaded!")

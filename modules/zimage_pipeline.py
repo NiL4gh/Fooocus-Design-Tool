@@ -49,6 +49,11 @@ def load_pipeline(progress_callback=None):
     if progress_callback:
         progress_callback("Loading Z-Image-Turbo model (first launch may take a few minutes)...")
 
+    # Garbage collect to free up critical CPU RAM before loading
+    gc.collect()
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+
     try:
         from diffusers import AutoPipelineForText2Image
 
@@ -65,9 +70,12 @@ def load_pipeline(progress_callback=None):
         )
 
         if device == "cuda":
-            _pipeline.enable_model_cpu_offload()
+            # Avoid CPU offloading because GPU memory (15GB) is plentiful on Colab while CPU RAM (12.7GB) is scarce.
+            # Loading directly to GPU keeps the CPU memory footprint minimal and prevents crashes.
+            _pipeline = _pipeline.to("cuda")
+            _pipeline.enable_attention_slicing()
             if progress_callback:
-                progress_callback("Model loaded with GPU acceleration + CPU offload")
+                progress_callback("Model loaded directly to GPU memory")
         else:
             _pipeline = _pipeline.to(device)
             if progress_callback:
