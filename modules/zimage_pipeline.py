@@ -58,13 +58,13 @@ def load_pipeline(progress_callback=None):
         from diffusers import AutoPipelineForText2Image
 
         device = get_device()
-        dtype = torch.float16 if device == "cuda" else torch.float32
+        dtype = torch.bfloat16 if device == "cuda" else torch.float32
 
         if progress_callback:
             progress_callback("Downloading model from HuggingFace...")
 
         _pipeline = AutoPipelineForText2Image.from_pretrained(
-            "ykarout/Z-Image-Turbo-FP8-Full",
+            "Tongyi-MAI/Z-Image-Turbo",
             torch_dtype=dtype,
             low_cpu_mem_usage=True,
         )
