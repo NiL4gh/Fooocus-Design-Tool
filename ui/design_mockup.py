@@ -9,7 +9,7 @@ from modules.logo_mockup import get_product_types, get_mockup_styles, generate_m
 from modules import config
 
 
-def _gen_mockup(logo_image, product_type, scene_prompt, mockup_style):
+def _gen_mockup(logo_image, product_type, scene_prompt, mockup_style, model_choice):
     """Generate dynamic mockup with progressive status updates."""
     if logo_image is None:
         yield "⚠️ Please upload a logo image first.", None
@@ -20,7 +20,7 @@ def _gen_mockup(logo_image, product_type, scene_prompt, mockup_style):
     def cb(msg):
         print(f"[Mockup] {msg}")
 
-    yield f"🎨 Generating empty {product_type} ({mockup_style}) background scene with AI...", None
+    yield f"🎨 Generating empty {product_type} ({mockup_style}) background scene with {model_choice}...", None
 
     try:
         mockup_img, status_msg = generate_mockup(
@@ -28,7 +28,8 @@ def _gen_mockup(logo_image, product_type, scene_prompt, mockup_style):
             product_type, 
             scene_prompt, 
             mockup_style,
-            progress_cb=cb
+            progress_cb=cb,
+            model_name=model_choice
         )
         
         if mockup_img is None:
@@ -57,6 +58,13 @@ def build_tab():
             gr.Markdown("### 📦 AI-Powered Logo Mockup Generator")
             gr.Markdown("Upload any logo graphic and dynamically place it on a photorealistic product mockup scene.")
             mockup_logo = gr.Image(label='📷 Upload Logo', type='pil', sources=['upload'], height=300)
+            mockup_model_choice = gr.Dropdown(
+                label="🤖 AI Model",
+                choices=["FLUX.1-schnell", "Z-Image-Turbo"],
+                value="FLUX.1-schnell",
+                interactive=True,
+                elem_id="mockup_model_dropdown"
+            )
             
             with gr.Row():
                 mockup_product = gr.Dropdown(label='🏷️ Product Type', choices=get_product_types(),
@@ -81,6 +89,6 @@ def build_tab():
 
     mockup_btn.click(
         _gen_mockup,
-        inputs=[mockup_logo, mockup_product, mockup_prompt, mockup_style],
+        inputs=[mockup_logo, mockup_product, mockup_prompt, mockup_style, mockup_model_choice],
         outputs=[mockup_status, mockup_preview]
     )

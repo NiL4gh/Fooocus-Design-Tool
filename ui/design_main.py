@@ -25,7 +25,7 @@ def _save_image(image, output_dir, fmt='png'):
 
 
 def _generate(category, prompt, negative_prompt, color1, color2, color3, color4, color5,
-              use_master_neg, use_enhancement, remove_bg, vector_mode, concept_grid, aspect_ratio, seed_val):
+              use_master_neg, use_enhancement, remove_bg, vector_mode, concept_grid, aspect_ratio, seed_val, model_name):
     """Core generation function wired to the Generate button."""
 
     if not prompt.strip() and not category:
@@ -65,10 +65,10 @@ def _generate(category, prompt, negative_prompt, color1, color2, color3, color4,
             from modules.zimage_pipeline import generate as zimage_generate
 
             # First generate raster, then vectorize
-            yield "🎨 Generating raster base image...", None, []
+            yield f"🎨 Generating raster base image using {model_name}...", None, []
             image, used_seed = zimage_generate(
                 prompt=final_prompt, negative_prompt=final_negative,
-                width=width, height=height, seed=seed,
+                width=width, height=height, seed=seed, model_name=model_name
             )
 
             yield "✏️ Vectorizing to SVG...", None, []
@@ -92,10 +92,10 @@ def _generate(category, prompt, negative_prompt, color1, color2, color3, color4,
         try:
             from modules.zimage_pipeline import generate as zimage_generate
 
-            yield "🎨 Generating image...", None, []
+            yield f"🎨 Generating image using {model_name}...", None, []
             image, used_seed = zimage_generate(
                 prompt=final_prompt, negative_prompt=final_negative,
-                width=width, height=height, seed=seed,
+                width=width, height=height, seed=seed, model_name=model_name
             )
 
             # Apply palette post-processing
@@ -154,6 +154,13 @@ def build_tab():
                 interactive=True,
                 elem_id='category_dropdown'
             )
+            model_choice = gr.Dropdown(
+                label="🤖 AI Model",
+                choices=["FLUX.1-schnell", "Z-Image-Turbo"],
+                value="FLUX.1-schnell",
+                interactive=True,
+                elem_id="model_dropdown"
+            )
             prompt = gr.Textbox(
                 label='✨ Prompt',
                 placeholder='Describe your design...',
@@ -175,7 +182,7 @@ def build_tab():
                     color3 = gr.ColorPicker(label='Color 3', value='#000000')
                     color4 = gr.ColorPicker(label='Color 4', value='#000000')
                     color5 = gr.ColorPicker(label='Color 5', value='#000000')
-
+ 
             with gr.Row():
                 use_master_neg = gr.Checkbox(label='Master negative prompt', value=True)
                 use_enhancement = gr.Checkbox(label='Category enhancement', value=True)
@@ -183,7 +190,7 @@ def build_tab():
                 remove_bg = gr.Checkbox(label='Remove background (transparent PNG)', value=True, elem_id='remove_bg')
                 vector_mode = gr.Checkbox(label='Vector mode (SVG)', value=False)
                 concept_grid = gr.Checkbox(label='2x2 Concept Grid', value=False)
-
+ 
             aspect_ratio = gr.Dropdown(
                 label='📐 Aspect Ratio',
                 choices=config.get_aspect_ratio_labels(),
@@ -191,27 +198,27 @@ def build_tab():
                 interactive=True
             )
             seed_val = gr.Textbox(label='🎲 Seed (-1 = random)', value='-1', max_lines=1)
-
+ 
             generate_btn = gr.Button('🚀 Generate', variant='primary', elem_id='generate_btn')
-
+ 
         # RIGHT PANEL - Output
         with gr.Column(scale=3):
             status = gr.Textbox(label='Status', interactive=False, elem_id='status_display')
             preview = gr.Image(label='Preview', type='pil', interactive=False, height=512)
             gallery = gr.Gallery(label='Generated Images', columns=4, height=300,
                                  object_fit='contain', elem_id='output_gallery')
-
+ 
     # Wire events
     category.change(_on_category_change, inputs=[category],
                      outputs=[remove_bg, aspect_ratio, status])
-
+ 
     generate_btn.click(
         _generate,
         inputs=[category, prompt, negative_prompt,
                 color1, color2, color3, color4, color5,
                 use_master_neg, use_enhancement, remove_bg, vector_mode, concept_grid,
-                aspect_ratio, seed_val],
+                aspect_ratio, seed_val, model_choice],
         outputs=[status, preview, gallery]
     )
-
+ 
     return category, prompt, negative_prompt, generate_btn, gallery

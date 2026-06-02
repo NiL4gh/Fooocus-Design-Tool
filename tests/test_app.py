@@ -132,6 +132,36 @@ class TestFooocusDesignTool(unittest.TestCase):
         self.assertIsInstance(mockup_mug, Image.Image)
         self.assertIn("generated successfully", status_mug)
 
+    def test_model_switching_mock(self):
+        """Test model switching in mock mode tracks the current model correctly."""
+        from modules import zimage_pipeline
+        zimage_pipeline.unload_pipeline()
+        
+        # Load first model
+        pipe1 = load_pipeline(model_name="FLUX.1-schnell")
+        self.assertEqual(pipe1, "mock_pipeline")
+        self.assertEqual(zimage_pipeline._current_model_name, "FLUX.1-schnell")
+        
+        # Generate with first model
+        img1, seed1 = generate("simple prompt", seed=42, model_name="FLUX.1-schnell")
+        self.assertIsInstance(img1, Image.Image)
+        self.assertEqual(zimage_pipeline._current_model_name, "FLUX.1-schnell")
+        
+        # Switch to second model
+        pipe2 = load_pipeline(model_name="Z-Image-Turbo")
+        self.assertEqual(pipe2, "mock_pipeline")
+        self.assertEqual(zimage_pipeline._current_model_name, "Z-Image-Turbo")
+        
+        # Generate with second model
+        img2, seed2 = generate("simple prompt", seed=42, model_name="Z-Image-Turbo")
+        self.assertIsInstance(img2, Image.Image)
+        self.assertEqual(zimage_pipeline._current_model_name, "Z-Image-Turbo")
+        
+        # Unload pipeline
+        zimage_pipeline.unload_pipeline()
+        self.assertIsNone(zimage_pipeline._pipeline)
+        self.assertIsNone(zimage_pipeline._current_model_name)
+
 
 if __name__ == "__main__":
     unittest.main()

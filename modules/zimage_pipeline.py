@@ -11,6 +11,7 @@ from PIL import Image
 
 _pipeline = None
 _device = None
+_current_model_name = None
 
 
 def get_device():
@@ -27,27 +28,32 @@ def get_device():
     return _device
 
 
-def load_pipeline(progress_callback=None):
+def load_pipeline(model_name="FLUX.1-schnell", progress_callback=None):
     """
-    Load Z-Image-Turbo pipeline with FP16 quantization and CPU offloading.
+    Load diffusion pipeline with quantization and GPU memory optimization.
 
     Args:
+        model_name: The name of the model to load ("FLUX.1-schnell" or "Z-Image-Turbo").
         progress_callback: Optional callable(message) for UI progress updates.
 
     Returns:
         The loaded diffusion pipeline.
     """
-    global _pipeline
+    global _pipeline, _current_model_name
 
     if os.environ.get("MOCK_IMAGE_GEN") == "1":
         _pipeline = "mock_pipeline"
+        _current_model_name = model_name
         return _pipeline
 
     if _pipeline is not None:
-        return _pipeline
+        if _current_model_name == model_name:
+            return _pipeline
+        else:
+            unload_pipeline()
 
     if progress_callback:
-        progress_callback("Loading Z-Image-Turbo model (first launch may take a few minutes)...")
+        progress_callback(f"Loading {model_name} model (first launch may take a few minutes)...")
 
     # Garbage collect to free up critical CPU RAM before loading
     gc.collect()
@@ -55,19 +61,30 @@ def load_pipeline(progress_callback=None):
         torch.cuda.empty_cache()
 
     try:
-        from diffusers import FluxPipeline
-
         device = get_device()
-        dtype = torch.float8_e4m3fn if device == "cuda" else torch.float32
 
-        if progress_callback:
-            progress_callback("Downloading FLUX.1-schnell model from HuggingFace...")
+        if model_name == "FLUX.1-schnell":
+            from diffusers import FluxPipeline
+            dtype = torch.float8_e4m3fn if device == "cuda" else torch.float32
+            if progress_callback:
+                progress_callback("Downloading FLUX.1-schnell model from HuggingFace...")
 
-        _pipeline = FluxPipeline.from_pretrained(
-            "black-forest-labs/FLUX.1-schnell",
-            torch_dtype=dtype,
-            low_cpu_mem_usage=True,
-        )
+            _pipeline = FluxPipeline.from_pretrained(
+                "black-forest-labs/FLUX.1-schnell",
+                torch_dtype=dtype,
+                low_cpu_mem_usage=True,
+            )
+        else:  # Z-Image-Turbo
+            from diffusers import AutoPipelineForText2Image
+            dtype = torch.bfloat16 if device == "cuda" else torch.float32
+            if progress_callback:
+                progress_callback("Downloading Z-Image-Turbo model from HuggingFace...")
+
+            _pipeline = AutoPipelineForText2Image.from_pretrained(
+                "Tongyi-MAI/Z-Image-Turbo",
+                torch_dtype=dtype,
+                low_cpu_mem_usage=True,
+            )
 
         if device == "cuda":
             # Avoid CPU offloading because GPU memory (15GB) is plentiful on Colab while CPU RAM (12.7GB) is scarce.
@@ -75,7 +92,7 @@ def load_pipeline(progress_callback=None):
             _pipeline = _pipeline.to("cuda")
             _pipeline.enable_attention_slicing()
             if progress_callback:
-                progress_callback("Model loaded directly to GPU memory (FP8)")
+                progress_callback(f"Model loaded directly to GPU memory ({dtype})")
         else:
             _pipeline = _pipeline.to(device)
             if progress_callback:
@@ -88,11 +105,13 @@ def load_pipeline(progress_callback=None):
             except Exception:
                 pass  # xformers not available, skip
 
-        print(f"[FLUX.1-schnell] Pipeline loaded on {device} with dtype {dtype}")
+        _current_model_name = model_name
+        print(f"[{model_name}] Pipeline loaded on {device} with dtype {dtype}")
 
     except Exception as e:
-        print(f"[Z-Image-Turbo] Failed to load pipeline: {e}")
+        print(f"[{model_name}] Failed to load pipeline: {e}")
         _pipeline = None
+        _current_model_name = None
         raise
 
     return _pipeline
@@ -107,9 +126,10 @@ def generate(
     num_inference_steps=4,
     guidance_scale=0.0,
     progress_callback=None,
+    model_name="FLUX.1-schnell",
 ):
     """
-    Generate an image using Z-Image-Turbo.
+    Generate an image using Z-Image-Turbo or FLUX.1-schnell.
 
     Args:
         prompt: Text prompt for generation.
@@ -120,6 +140,7 @@ def generate(
         num_inference_steps: Number of diffusion steps (default 4 for turbo).
         guidance_scale: CFG scale (0.0 for turbo models).
         progress_callback: Optional callable(message) for progress updates.
+        model_name: The name of the model to load ("FLUX.1-schnell" or "Z-Image-Turbo").
 
     Returns:
         PIL Image object.
@@ -130,13 +151,15 @@ def generate(
 
     if os.environ.get("MOCK_IMAGE_GEN") == "1":
         from PIL import Image, ImageDraw
+        global _current_model_name
+        _current_model_name = model_name
 
         if seed == -1 or seed is None:
             seed = random.randint(0, 2**32 - 1)
         random.seed(seed)
 
         if progress_callback:
-            progress_callback(f"[Mock Engine] Generating image (seed: {seed})...")
+            progress_callback(f"[Mock Engine] Generating image using {model_name} (seed: {seed})...")
 
         # Extract hex colors
         colors = re.findall(r'#[0-9a-fA-F]{6}', prompt)
@@ -175,13 +198,13 @@ def generate(
         info_h = int(height * 0.15)
         draw.rectangle([0, height - info_h, width, height], fill="#1e1b4b")
         draw.text((int(width * 0.05), height - int(info_h * 0.8)), f"PROMPT: {prompt[:80]}...", fill="#f8fafc")
-        draw.text((int(width * 0.05), height - int(info_h * 0.45)), f"MOCK ENGINE (SEED: {seed}) | AUTOMATIC ASSET DESIGNER", fill="#38bdf8")
+        draw.text((int(width * 0.05), height - int(info_h * 0.45)), f"MOCK ENGINE ({model_name}) (SEED: {seed}) | AUTOMATIC ASSET DESIGNER", fill="#38bdf8")
 
         if progress_callback:
-            progress_callback("[Mock Engine] Generation complete!")
+            progress_callback(f"[Mock Engine] Generation complete for {model_name}!")
         return image, seed
 
-    pipe = load_pipeline(progress_callback)
+    pipe = load_pipeline(model_name=model_name, progress_callback=progress_callback)
 
     if seed == -1:
         seed = random.randint(0, 2**32 - 1)
@@ -189,7 +212,7 @@ def generate(
     generator = torch.Generator(device="cpu").manual_seed(seed)
 
     if progress_callback:
-        progress_callback(f"Generating image (seed: {seed})...")
+        progress_callback(f"Generating image using {model_name} (seed: {seed})...")
 
     try:
         import inspect
@@ -216,7 +239,7 @@ def generate(
         return image, seed
 
     except Exception as e:
-        print(f"[Z-Image-Turbo] Generation failed: {e}")
+        print(f"[{model_name}] Generation failed: {e}")
         raise
 
 
@@ -230,6 +253,7 @@ def generate_variations(
     count=4,
     variation_strength=50,
     progress_callback=None,
+    model_name="FLUX.1-schnell",
 ):
     """
     Generate multiple variations by mixing seeds.
@@ -243,6 +267,7 @@ def generate_variations(
         count: Number of variations (2-4).
         variation_strength: How different the variations should be (1-100).
         progress_callback: Optional progress callback.
+        model_name: The name of the model to use.
 
     Returns:
         List of (PIL Image, seed) tuples.
@@ -268,6 +293,7 @@ def generate_variations(
             height=height,
             seed=varied_seed,
             progress_callback=None,
+            model_name=model_name,
         )
         results.append((image, used_seed))
 
@@ -276,10 +302,11 @@ def generate_variations(
 
 def unload_pipeline():
     """Free VRAM by unloading the pipeline."""
-    global _pipeline
+    global _pipeline, _current_model_name
     if _pipeline is not None:
         del _pipeline
         _pipeline = None
+        _current_model_name = None
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
         gc.collect()

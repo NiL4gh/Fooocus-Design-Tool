@@ -107,9 +107,9 @@ def apply_shading_blend(logo_rgb, bg_crop_rgb):
     return Image.fromarray(soft_light)
 
 
-def generate_mockup(logo_image, product_type, prompt="", mockup_style="Single Product (Centered)", progress_cb=None):
+def generate_mockup(logo_image, product_type, prompt="", mockup_style="Single Product (Centered)", progress_cb=None, model_name="FLUX.1-schnell"):
     """
-    Generate a dynamic product mockup using Z-Image-Turbo, then place and blend the logo.
+    Generate a dynamic product mockup using Z-Image-Turbo or FLUX.1-schnell, then place and blend the logo.
     
     Args:
         logo_image: PIL Image or numpy array of the logo.
@@ -117,6 +117,7 @@ def generate_mockup(logo_image, product_type, prompt="", mockup_style="Single Pr
         prompt: Optional custom scene description prompt.
         mockup_style: String, layout style (Single, Bento, or Ambient).
         progress_cb: Callable(msg) for UI progress updates.
+        model_name: The name of the model to use.
         
     Returns:
         (mockup_image, status_message)
@@ -185,7 +186,8 @@ def generate_mockup(logo_image, product_type, prompt="", mockup_style="Single Pr
             width=1024,
             height=1024,
             seed=-1,
-            progress_callback=None
+            progress_callback=None,
+            model_name=model_name
         )
     except Exception as e:
         return None, f"❌ Failed to generate mockup background scene: {str(e)}"
