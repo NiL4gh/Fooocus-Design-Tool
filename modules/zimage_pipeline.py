@@ -73,6 +73,7 @@ def load_pipeline(model_name="FLUX.1-schnell", progress_callback=None):
                 "black-forest-labs/FLUX.1-schnell",
                 torch_dtype=dtype,
                 low_cpu_mem_usage=True,
+                device_map="balanced" if device == "cuda" else None,
             )
         else:  # Z-Image-Turbo
             from diffusers import AutoPipelineForText2Image
@@ -84,15 +85,13 @@ def load_pipeline(model_name="FLUX.1-schnell", progress_callback=None):
                 "Tongyi-MAI/Z-Image-Turbo",
                 torch_dtype=dtype,
                 low_cpu_mem_usage=True,
+                device_map="balanced" if device == "cuda" else None,
             )
 
         if device == "cuda":
-            # Avoid CPU offloading because GPU memory (15GB) is plentiful on Colab while CPU RAM (12.7GB) is scarce.
-            # Loading directly to GPU keeps the CPU memory footprint minimal and prevents crashes.
-            _pipeline = _pipeline.to("cuda")
             _pipeline.enable_attention_slicing()
             if progress_callback:
-                progress_callback(f"Model loaded directly to GPU memory ({dtype})")
+                progress_callback(f"Model loaded successfully on GPU ({dtype})")
         else:
             _pipeline = _pipeline.to(device)
             if progress_callback:
