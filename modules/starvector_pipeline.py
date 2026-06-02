@@ -37,7 +37,7 @@ def load_model(progress_cb=None):
         torch_dtype=dt,
         trust_remote_code=True,
         low_cpu_mem_usage=True,
-        device_map=dev
+        device_map="auto"
     )
     _model.eval()
     if progress_cb: progress_cb("StarVector-1B loaded!")
