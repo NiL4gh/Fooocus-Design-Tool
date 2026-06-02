@@ -90,6 +90,9 @@ def load_pipeline(model_name="FLUX.1-schnell", progress_callback=None):
 
         if device == "cuda":
             _pipeline.enable_attention_slicing()
+            if model_name == "FLUX.1-schnell":
+                _pipeline.vae.enable_tiling()
+                _pipeline.vae.enable_slicing()
             if progress_callback:
                 progress_callback(f"Model loaded successfully on GPU ({dtype})")
         else:
