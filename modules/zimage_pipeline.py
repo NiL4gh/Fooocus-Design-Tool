@@ -56,18 +56,25 @@ def load_pipeline(progress_callback=None):
 
     try:
         from diffusers import AutoPipelineForText2Image
+        from sdnq.loader import apply_sdnq_options_to_model
 
         device = get_device()
-        dtype = torch.bfloat16 if device == "cuda" else torch.float32
+        dtype = torch.float32
 
         if progress_callback:
             progress_callback("Downloading model from HuggingFace...")
 
         _pipeline = AutoPipelineForText2Image.from_pretrained(
-            "Tongyi-MAI/Z-Image-Turbo",
+            "Disty0/Z-Image-Turbo-SDNQ-uint4-svd-r32",
             torch_dtype=dtype,
             low_cpu_mem_usage=True,
         )
+
+        if progress_callback:
+            progress_callback("Applying SDNQ 4-bit quantization...")
+
+        _pipeline.transformer = apply_sdnq_options_to_model(_pipeline.transformer, use_quantized_matmul=True)
+        _pipeline.text_encoder = apply_sdnq_options_to_model(_pipeline.text_encoder, use_quantized_matmul=True)
 
         if device == "cuda":
             # Avoid CPU offloading because GPU memory (15GB) is plentiful on Colab while CPU RAM (12.7GB) is scarce.
@@ -88,7 +95,7 @@ def load_pipeline(progress_callback=None):
             except Exception:
                 pass  # xformers not available, skip
 
-        print(f"[Z-Image-Turbo] Pipeline loaded on {device} with dtype {dtype}")
+        print(f"[Z-Image-Turbo] SDNQ 4-bit Pipeline loaded on {device} with dtype {dtype}")
 
     except Exception as e:
         print(f"[Z-Image-Turbo] Failed to load pipeline: {e}")
