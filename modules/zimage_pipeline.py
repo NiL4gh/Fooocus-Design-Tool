@@ -55,26 +55,19 @@ def load_pipeline(progress_callback=None):
         torch.cuda.empty_cache()
 
     try:
-        from diffusers import AutoPipelineForText2Image
-        from sdnq.loader import apply_sdnq_options_to_model
+        from diffusers import FluxPipeline
 
         device = get_device()
-        dtype = torch.float32
+        dtype = torch.float8_e4m3fn if device == "cuda" else torch.float32
 
         if progress_callback:
-            progress_callback("Downloading model from HuggingFace...")
+            progress_callback("Downloading FLUX.1-schnell model from HuggingFace...")
 
-        _pipeline = AutoPipelineForText2Image.from_pretrained(
-            "Disty0/Z-Image-Turbo-SDNQ-uint4-svd-r32",
+        _pipeline = FluxPipeline.from_pretrained(
+            "black-forest-labs/FLUX.1-schnell",
             torch_dtype=dtype,
             low_cpu_mem_usage=True,
         )
-
-        if progress_callback:
-            progress_callback("Applying SDNQ 4-bit quantization...")
-
-        _pipeline.transformer = apply_sdnq_options_to_model(_pipeline.transformer, use_quantized_matmul=True)
-        _pipeline.text_encoder = apply_sdnq_options_to_model(_pipeline.text_encoder, use_quantized_matmul=True)
 
         if device == "cuda":
             # Avoid CPU offloading because GPU memory (15GB) is plentiful on Colab while CPU RAM (12.7GB) is scarce.
@@ -82,7 +75,7 @@ def load_pipeline(progress_callback=None):
             _pipeline = _pipeline.to("cuda")
             _pipeline.enable_attention_slicing()
             if progress_callback:
-                progress_callback("Model loaded directly to GPU memory")
+                progress_callback("Model loaded directly to GPU memory (FP8)")
         else:
             _pipeline = _pipeline.to(device)
             if progress_callback:
@@ -95,7 +88,7 @@ def load_pipeline(progress_callback=None):
             except Exception:
                 pass  # xformers not available, skip
 
-        print(f"[Z-Image-Turbo] SDNQ 4-bit Pipeline loaded on {device} with dtype {dtype}")
+        print(f"[FLUX.1-schnell] Pipeline loaded on {device} with dtype {dtype}")
 
     except Exception as e:
         print(f"[Z-Image-Turbo] Failed to load pipeline: {e}")
@@ -199,15 +192,21 @@ def generate(
         progress_callback(f"Generating image (seed: {seed})...")
 
     try:
-        result = pipe(
-            prompt=prompt,
-            negative_prompt=negative_prompt if negative_prompt else None,
-            width=width,
-            height=height,
-            num_inference_steps=num_inference_steps,
-            guidance_scale=guidance_scale,
-            generator=generator,
-        )
+        import inspect
+        sig = inspect.signature(pipe.__call__)
+        kwargs = {
+            "prompt": prompt,
+            "width": width,
+            "height": height,
+            "num_inference_steps": num_inference_steps,
+            "generator": generator,
+        }
+        if "guidance_scale" in sig.parameters:
+            kwargs["guidance_scale"] = guidance_scale if "flux" not in str(pipe.__class__).lower() else 0.0
+        if "negative_prompt" in sig.parameters and negative_prompt:
+            kwargs["negative_prompt"] = negative_prompt
+
+        result = pipe(**kwargs)
 
         image = result.images[0]
 
