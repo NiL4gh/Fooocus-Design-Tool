@@ -10,6 +10,7 @@ import random
 from modules.design_categories import get_category_names, get_category, get_default_transparent, get_default_aspect_ratio, get_category_icon
 from modules.auto_prompt_enhancer import enhance_prompt, build_negative_prompt
 from modules.palette_control import inject_palette_prompt, apply_palette_post
+from modules.sdxl_pipeline import generate as sdxl_generate
 from modules import config
 
 
@@ -25,12 +26,16 @@ def _save_image(image, output_dir, fmt='png'):
 
 
 def _generate(category, prompt, negative_prompt, color1, color2, color3, color4, color5,
-              use_master_neg, use_enhancement, remove_bg, vector_mode, concept_grid, aspect_ratio, seed_val, model_name):
+              use_master_neg, use_enhancement, remove_bg, vector_mode, concept_grid, aspect_ratio, seed_val, speed_mode_label):
     """Core generation function wired to the Generate button."""
 
     if not prompt.strip() and not category:
         yield "⚠️ Please enter a prompt.", None, []
         return
+
+    # Parse speed mode and category config
+    speed_mode = "fast" if "Fast" in str(speed_mode_label) else "master"
+    cat_cfg = get_category(category) if category else None
 
     # Build final prompts
     final_prompt = prompt
@@ -62,13 +67,17 @@ def _generate(category, prompt, negative_prompt, color1, color2, color3, color4,
         yield "🔄 Loading StarVector (first use may download model)...", None, []
         try:
             from modules.starvector_pipeline import image_to_svg, load_model
-            from modules.zimage_pipeline import generate as zimage_generate
 
             # First generate raster, then vectorize
-            yield f"🎨 Generating raster base image using {model_name}...", None, []
-            image, used_seed = zimage_generate(
-                prompt=final_prompt, negative_prompt=final_negative,
-                width=width, height=height, seed=seed, model_name=model_name
+            yield "🎨 Generating raster base image using SDXL Juggernaut...", None, []
+            image, used_seed = sdxl_generate(
+                prompt=final_prompt,
+                negative_prompt=final_negative,
+                width=width,
+                height=height,
+                seed=seed,
+                speed_mode=speed_mode,
+                category_cfg=cat_cfg,
             )
 
             yield "✏️ Vectorizing to SVG...", None, []
@@ -90,12 +99,15 @@ def _generate(category, prompt, negative_prompt, color1, color2, color3, color4,
     else:
         # Standard raster generation
         try:
-            from modules.zimage_pipeline import generate as zimage_generate
-
-            yield f"🎨 Generating image using {model_name}...", None, []
-            image, used_seed = zimage_generate(
-                prompt=final_prompt, negative_prompt=final_negative,
-                width=width, height=height, seed=seed, model_name=model_name
+            yield "🎨 Generating image using SDXL Juggernaut...", None, []
+            image, used_seed = sdxl_generate(
+                prompt=final_prompt,
+                negative_prompt=final_negative,
+                width=width,
+                height=height,
+                seed=seed,
+                speed_mode=speed_mode,
+                category_cfg=cat_cfg,
             )
 
             # Apply palette post-processing
@@ -154,12 +166,12 @@ def build_tab():
                 interactive=True,
                 elem_id='category_dropdown'
             )
-            model_choice = gr.Dropdown(
-                label="🤖 AI Model",
-                choices=["FLUX.1-schnell", "Z-Image-Turbo"],
-                value="FLUX.1-schnell",
+            speed_choice = gr.Radio(
+                label="⚡ Engine Mode",
+                choices=["⚡ Fast (~3s)", "🎯 Master (~15s)"],
+                value="⚡ Fast (~3s)",
                 interactive=True,
-                elem_id="model_dropdown"
+                elem_id="speed_choice_radio",
             )
             prompt = gr.Textbox(
                 label='✨ Prompt',
@@ -217,7 +229,7 @@ def build_tab():
         inputs=[category, prompt, negative_prompt,
                 color1, color2, color3, color4, color5,
                 use_master_neg, use_enhancement, remove_bg, vector_mode, concept_grid,
-                aspect_ratio, seed_val, model_choice],
+                aspect_ratio, seed_val, speed_choice],
         outputs=[status, preview, gallery]
     )
  

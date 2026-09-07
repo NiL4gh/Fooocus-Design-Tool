@@ -1,6 +1,6 @@
 """
 Fooocus Design Tool — Web UI
-A specialized graphic design asset generator built on Z-Image-Turbo.
+A specialized graphic design asset generator built on SDXL Juggernaut-XL.
 """
 import gradio as gr
 from ui.theme import THEME_CSS
@@ -12,14 +12,14 @@ def clean_vram():
     """Clean GPU VRAM memory by unloading active models and collecting garbage."""
     import gc
     import torch
-    from modules.zimage_pipeline import unload_pipeline, is_loaded as is_z
+    from modules.sdxl_pipeline import unload_pipeline, is_loaded as is_sdxl
     from modules.starvector_pipeline import unload_model, is_loaded as is_sv
     
     freed = []
     try:
-        if is_z():
+        if is_sdxl():
             unload_pipeline()
-            freed.append("Z-Image-Turbo")
+            freed.append("Juggernaut-XL (SDXL)")
         if is_sv():
             unload_model()
             freed.append("StarVector-1B")

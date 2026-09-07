@@ -21,7 +21,7 @@ from modules.design_categories import (
 )
 from modules.auto_prompt_enhancer import enhance_prompt, build_negative_prompt
 from modules.palette_control import inject_palette_prompt, apply_palette_post
-from modules.zimage_pipeline import generate, generate_variations, load_pipeline
+from modules.sdxl_pipeline import generate, generate_variations, load_pipeline
 from modules.starvector_pipeline import image_to_svg, load_model
 from modules.background_remover import remove_background
 from modules.logo_mockup import generate_mockup, cylinder_warp, apply_shading_blend
@@ -77,8 +77,8 @@ class TestFooocusDesignTool(unittest.TestCase):
         processed_img = apply_palette_post(img, colors, strength=0.5)
         self.assertEqual(processed_img.size, (100, 100))
 
-    def test_zimage_pipeline_mock(self):
-        """Test mock diffusion generation runs and creates valid PIL images."""
+    def test_sdxl_pipeline_mock(self):
+        """Test mock SDXL diffusion generation runs and creates valid PIL images."""
         prompt = "A glowing retro flyer with #e11d48 and #2563eb accents"
         img, seed = generate(prompt, width=256, height=256, seed=42)
         
@@ -89,6 +89,8 @@ class TestFooocusDesignTool(unittest.TestCase):
         # Verify the pipeline returns mock indicator
         pipe = load_pipeline()
         self.assertEqual(pipe, "mock_pipeline")
+
+    test_zimage_pipeline_mock = test_sdxl_pipeline_mock
 
     def test_starvector_mock(self):
         """Test mock vectorization creates valid SVGs."""
@@ -132,35 +134,76 @@ class TestFooocusDesignTool(unittest.TestCase):
         self.assertIsInstance(mockup_mug, Image.Image)
         self.assertIn("generated successfully", status_mug)
 
-    def test_model_switching_mock(self):
-        """Test model switching in mock mode tracks the current model correctly."""
-        from modules import zimage_pipeline
-        zimage_pipeline.unload_pipeline()
+    def test_speed_mode_switching_mock(self):
+        """Test speed mode switching in mock mode tracks the current speed mode correctly."""
+        from modules import sdxl_pipeline
+        sdxl_pipeline.unload_pipeline()
         
-        # Load first model
-        pipe1 = load_pipeline(model_name="FLUX.1-schnell")
+        # Load fast mode
+        pipe1 = load_pipeline(speed_mode="fast")
         self.assertEqual(pipe1, "mock_pipeline")
-        self.assertEqual(zimage_pipeline._current_model_name, "FLUX.1-schnell")
+        self.assertEqual(sdxl_pipeline.get_current_speed_mode(), "fast")
         
-        # Generate with first model
-        img1, seed1 = generate("simple prompt", seed=42, model_name="FLUX.1-schnell")
+        # Generate with fast mode
+        img1, seed1 = generate("simple prompt", seed=42, speed_mode="fast")
         self.assertIsInstance(img1, Image.Image)
-        self.assertEqual(zimage_pipeline._current_model_name, "FLUX.1-schnell")
+        self.assertEqual(sdxl_pipeline.get_current_speed_mode(), "fast")
         
-        # Switch to second model
-        pipe2 = load_pipeline(model_name="Z-Image-Turbo")
+        # Switch to master mode
+        pipe2 = load_pipeline(speed_mode="master")
         self.assertEqual(pipe2, "mock_pipeline")
-        self.assertEqual(zimage_pipeline._current_model_name, "Z-Image-Turbo")
+        self.assertEqual(sdxl_pipeline.get_current_speed_mode(), "master")
         
-        # Generate with second model
-        img2, seed2 = generate("simple prompt", seed=42, model_name="Z-Image-Turbo")
+        # Generate with master mode
+        img2, seed2 = generate("simple prompt", seed=42, speed_mode="master")
         self.assertIsInstance(img2, Image.Image)
-        self.assertEqual(zimage_pipeline._current_model_name, "Z-Image-Turbo")
+        self.assertEqual(sdxl_pipeline.get_current_speed_mode(), "master")
         
         # Unload pipeline
-        zimage_pipeline.unload_pipeline()
-        self.assertIsNone(zimage_pipeline._pipeline)
-        self.assertIsNone(zimage_pipeline._current_model_name)
+        sdxl_pipeline.unload_pipeline()
+        self.assertIsNone(sdxl_pipeline._pipeline)
+        self.assertIsNone(sdxl_pipeline.get_current_speed_mode())
+
+    test_model_switching_mock = test_speed_mode_switching_mock
+
+    def test_clean_vram_sdxl(self):
+        """Test webui clean_vram correctly unloads SDXL Juggernaut."""
+        from webui import clean_vram
+        from modules.sdxl_pipeline import load_pipeline
+        load_pipeline()
+        result_html = clean_vram()
+        self.assertIn("Juggernaut-XL (SDXL)", result_html)
+
+    def test_ui_design_main_generation_flow(self):
+        """Test ui.design_main generation flow end-to-end in mock mode."""
+        from ui.design_main import _generate, build_tab
+        import gradio as gr
+
+        # Verify build_tab constructs without error
+        with gr.Blocks():
+            comps = build_tab()
+            self.assertEqual(len(comps), 5)
+
+        # Verify _generate produces successful output
+        gen = _generate(
+            category="Logo",
+            prompt="modern tech icon",
+            negative_prompt="",
+            color1="#000000", color2="#000000", color3="#000000", color4="#000000", color5="#000000",
+            use_master_neg=True,
+            use_enhancement=True,
+            remove_bg=False,
+            vector_mode=False,
+            concept_grid=False,
+            aspect_ratio="1024×1024 (1:1)",
+            seed_val="42",
+            speed_mode_label="⚡ Fast (~3s)"
+        )
+        steps = list(gen)
+        self.assertGreater(len(steps), 0)
+        status, img, gallery = steps[-1]
+        self.assertIn("Done", status)
+        self.assertIsNotNone(img)
 
 
 if __name__ == "__main__":
