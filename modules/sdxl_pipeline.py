@@ -11,7 +11,7 @@ import torch
 from typing import Optional, Tuple, List, Dict, Any
 from PIL import Image
 
-from modules.lora_router import apply_category_lora, clear_adapters
+from modules.lora_router import apply_category_lora, clear_adapters, get_active_adapter
 
 _pipeline = None
 _device = None
@@ -51,7 +51,8 @@ def load_pipeline(speed_mode: str = "fast", progress_callback=None):
     global _pipeline, _current_speed_mode
 
     if os.environ.get("MOCK_IMAGE_GEN") == "1":
-        _pipeline = "mock_pipeline"
+        if _pipeline is None:
+            _pipeline = "mock_pipeline"
         _current_speed_mode = speed_mode
         return _pipeline
 
@@ -93,11 +94,12 @@ def load_pipeline(speed_mode: str = "fast", progress_callback=None):
                     _pipeline.enable_attention_slicing()
                 except Exception:
                     pass
+            elif device == "mps":
+                _pipeline.to("mps")
 
         # Configure scheduler for speed mode
         if speed_mode == "fast":
             # Load 4-step Lightning configuration
-            from diffusers import EulerDiscreteScheduler
             _pipeline.scheduler = EulerDiscreteScheduler.from_config(
                 _pipeline.scheduler.config,
                 timestep_spacing="trailing"
@@ -109,9 +111,13 @@ def load_pipeline(speed_mode: str = "fast", progress_callback=None):
                     weight_name=LIGHTNING_LORA_WEIGHT,
                     adapter_name="lightning_fast"
                 )
-                _pipeline.set_adapters(["lightning_fast"], adapter_weights=[1.0])
             except Exception as e:
                 print(f"[SDXL Pipeline] Lightning adapter notice: {e}")
+
+            if hasattr(_pipeline, "enable_lora"):
+                _pipeline.enable_lora()
+            if hasattr(_pipeline, "set_adapters"):
+                _pipeline.set_adapters(["lightning_fast"], adapter_weights=[1.0])
         else:
             # Master mode: standard DPM++ 2M Karras or Euler
             from diffusers import DPMSolverMultistepScheduler
@@ -137,6 +143,11 @@ def load_pipeline(speed_mode: str = "fast", progress_callback=None):
         raise
 
     return _pipeline
+
+
+def get_current_speed_mode() -> Optional[str]:
+    """Return currently active speed mode ('fast', 'master', or None)."""
+    return _current_speed_mode
 
 
 def generate(
@@ -168,6 +179,42 @@ def generate(
     if seed == -1 or seed is None:
         seed = random.randint(0, 2**32 - 1)
 
+    pipe = load_pipeline(speed_mode=speed_mode, progress_callback=progress_callback)
+
+    # Configure adapters on pipe
+    trigger_words = ""
+    has_lora = bool(category_cfg and category_cfg.get("lora"))
+    if has_lora:
+        trigger_words = apply_category_lora(pipe, category_cfg)
+        adapter_name = get_active_adapter()
+        lora_weight = float(category_cfg["lora"].get("weight", 0.85))
+        if adapter_name:
+            if speed_mode == "fast":
+                if hasattr(pipe, "enable_lora"):
+                    pipe.enable_lora()
+                if hasattr(pipe, "set_adapters"):
+                    pipe.set_adapters(["lightning_fast", adapter_name], adapter_weights=[1.0, lora_weight])
+            else:
+                if hasattr(pipe, "enable_lora"):
+                    pipe.enable_lora()
+                if hasattr(pipe, "set_adapters"):
+                    pipe.set_adapters([adapter_name], adapter_weights=[lora_weight])
+        else:
+            if speed_mode == "fast":
+                if hasattr(pipe, "enable_lora"):
+                    pipe.enable_lora()
+                if hasattr(pipe, "set_adapters"):
+                    pipe.set_adapters(["lightning_fast"], adapter_weights=[1.0])
+    else:
+        clear_adapters(pipe)
+        if speed_mode == "fast":
+            if hasattr(pipe, "enable_lora"):
+                pipe.enable_lora()
+            if hasattr(pipe, "set_adapters"):
+                pipe.set_adapters(["lightning_fast"], adapter_weights=[1.0])
+
+    final_prompt = f"{trigger_words}, {prompt}".strip(", ") if trigger_words else prompt
+
     # In mock mode, synthesize design image for fast headless testing
     if os.environ.get("MOCK_IMAGE_GEN") == "1":
         from PIL import ImageDraw
@@ -187,15 +234,6 @@ def generate(
         if progress_callback:
             progress_callback("Mock generation complete!")
         return img, seed
-
-    pipe = load_pipeline(speed_mode=speed_mode, progress_callback=progress_callback)
-
-    # Apply category baked LoRA if present
-    trigger_words = ""
-    if category_cfg:
-        trigger_words = apply_category_lora(pipe, category_cfg)
-
-    final_prompt = f"{trigger_words}, {prompt}".strip(", ") if trigger_words else prompt
 
     # Configure steps and CFG according to speed mode
     if speed_mode == "fast":
