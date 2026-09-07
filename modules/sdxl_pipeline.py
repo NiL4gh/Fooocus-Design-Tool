@@ -11,6 +11,7 @@ import torch
 from typing import Optional, Tuple, List, Dict, Any
 from PIL import Image
 
+import modules.config as config
 from modules.lora_router import apply_category_lora, clear_adapters, get_active_adapter
 
 _pipeline = None
@@ -182,36 +183,20 @@ def generate(
     pipe = load_pipeline(speed_mode=speed_mode, progress_callback=progress_callback)
 
     # Configure adapters on pipe
+    base_adapters = ["lightning_fast"] if speed_mode == "fast" else None
+    base_weights = [1.0] if speed_mode == "fast" else None
+
     trigger_words = ""
     has_lora = bool(category_cfg and category_cfg.get("lora"))
     if has_lora:
-        trigger_words = apply_category_lora(pipe, category_cfg)
-        adapter_name = get_active_adapter()
-        lora_weight = float(category_cfg["lora"].get("weight", 0.85))
-        if adapter_name:
-            if speed_mode == "fast":
-                if hasattr(pipe, "enable_lora"):
-                    pipe.enable_lora()
-                if hasattr(pipe, "set_adapters"):
-                    pipe.set_adapters(["lightning_fast", adapter_name], adapter_weights=[1.0, lora_weight])
-            else:
-                if hasattr(pipe, "enable_lora"):
-                    pipe.enable_lora()
-                if hasattr(pipe, "set_adapters"):
-                    pipe.set_adapters([adapter_name], adapter_weights=[lora_weight])
-        else:
-            if speed_mode == "fast":
-                if hasattr(pipe, "enable_lora"):
-                    pipe.enable_lora()
-                if hasattr(pipe, "set_adapters"):
-                    pipe.set_adapters(["lightning_fast"], adapter_weights=[1.0])
+        trigger_words = apply_category_lora(
+            pipe,
+            category_cfg,
+            base_adapters=base_adapters,
+            base_weights=base_weights,
+        )
     else:
-        clear_adapters(pipe)
-        if speed_mode == "fast":
-            if hasattr(pipe, "enable_lora"):
-                pipe.enable_lora()
-            if hasattr(pipe, "set_adapters"):
-                pipe.set_adapters(["lightning_fast"], adapter_weights=[1.0])
+        clear_adapters(pipe, base_adapters=base_adapters, base_weights=base_weights)
 
     final_prompt = f"{trigger_words}, {prompt}".strip(", ") if trigger_words else prompt
 
@@ -237,11 +222,11 @@ def generate(
 
     # Configure steps and CFG according to speed mode
     if speed_mode == "fast":
-        steps = 6
-        cfg_scale = 1.8
+        steps = config.DEFAULT_STEPS_FAST
+        cfg_scale = config.DEFAULT_GUIDANCE_FAST
     else:
-        steps = 28
-        cfg_scale = 6.0
+        steps = config.DEFAULT_STEPS_MASTER
+        cfg_scale = config.DEFAULT_GUIDANCE_MASTER
 
     generator = torch.Generator(device="cpu").manual_seed(seed)
 

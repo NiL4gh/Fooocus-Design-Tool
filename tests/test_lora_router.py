@@ -15,6 +15,7 @@ class DummyPipeline:
     def __init__(self):
         self.loaded_adapters = {}
         self.active_adapters = []
+        self.adapter_weights = []
         self.is_lora_enabled = True
         self.load_count = 0
 
@@ -24,9 +25,11 @@ class DummyPipeline:
 
     def set_adapters(self, adapter_names, adapter_weights=None):
         self.active_adapters = list(adapter_names)
+        self.adapter_weights = list(adapter_weights) if adapter_weights is not None else []
 
     def disable_lora(self):
         self.active_adapters = []
+        self.adapter_weights = []
         self.is_lora_enabled = False
 
     def enable_lora(self):
@@ -79,6 +82,50 @@ class TestLoraRouter(unittest.TestCase):
         self.assertIsNone(get_active_adapter())
         self.assertEqual(len(self.pipe.active_adapters), 0)
         self.assertFalse(self.pipe.is_lora_enabled)
+
+    def test_apply_category_lora_with_base_adapters(self):
+        cfg = {
+            "name": "Adobe Stock Silhouette",
+            "lora": {
+                "source": "models/loras/silhouette.safetensors",
+                "weight": 0.85,
+                "trigger_words": "solid black silhouette"
+            }
+        }
+        trigger = apply_category_lora(
+            self.pipe,
+            cfg,
+            base_adapters=["lightning_fast"],
+            base_weights=[1.0]
+        )
+        self.assertEqual(trigger, "solid black silhouette")
+        self.assertEqual(get_active_adapter(), "adobe_stock_silhouette")
+        self.assertEqual(self.pipe.active_adapters, ["lightning_fast", "adobe_stock_silhouette"])
+        self.assertEqual(self.pipe.adapter_weights, [1.0, 0.85])
+        self.assertTrue(self.pipe.is_lora_enabled)
+
+    def test_clear_adapters_with_base_adapters(self):
+        cfg = {
+            "name": "Flat Vector",
+            "lora": {
+                "source": "models/loras/flat_vector.safetensors",
+                "weight": 0.8,
+                "trigger_words": "flat vector"
+            }
+        }
+        apply_category_lora(
+            self.pipe,
+            cfg,
+            base_adapters=["lightning_fast"],
+            base_weights=[1.0]
+        )
+        self.assertEqual(self.pipe.active_adapters, ["lightning_fast", "flat_vector"])
+
+        clear_adapters(self.pipe, base_adapters=["lightning_fast"], base_weights=[1.0])
+        self.assertIsNone(get_active_adapter())
+        self.assertEqual(self.pipe.active_adapters, ["lightning_fast"])
+        self.assertEqual(self.pipe.adapter_weights, [1.0])
+        self.assertTrue(self.pipe.is_lora_enabled)
 
     def test_is_lora_available(self):
         # Empty string and None

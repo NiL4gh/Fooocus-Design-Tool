@@ -178,6 +178,29 @@ class TestSDXLPipeline(unittest.TestCase):
         self.assertEqual(dummy_pipe.active_adapters, [])
         self.assertFalse(dummy_pipe.is_lora_enabled)
 
+    def test_fast_mode_adapter_lifecycle_retains_lightning_fast(self):
+        dummy_pipe = DummyPipeline()
+        sdxl_pipeline._pipeline = dummy_pipe
+        cat_cfg = {
+            "name": "Adobe Stock Silhouette",
+            "lora": {
+                "source": "models/loras/silhouette.safetensors",
+                "weight": 0.85,
+                "trigger_words": "solid black silhouette"
+            }
+        }
+        # 1. Apply category LoRA in fast mode -> lightning_fast is retained alongside category adapter
+        generate("owl on branch", width=512, height=512, seed=42, speed_mode="fast", category_cfg=cat_cfg)
+        self.assertEqual(dummy_pipe.active_adapters, ["lightning_fast", "adobe_stock_silhouette"])
+        self.assertEqual(dummy_pipe.adapter_weights, [1.0, 0.85])
+        self.assertTrue(dummy_pipe.is_lora_enabled)
+
+        # 2. Subsequent generation in fast mode without category LoRA -> lightning_fast is retained, not stripped
+        generate("mountain landscape", width=512, height=512, seed=43, speed_mode="fast", category_cfg=None)
+        self.assertEqual(dummy_pipe.active_adapters, ["lightning_fast"])
+        self.assertEqual(dummy_pipe.adapter_weights, [1.0])
+        self.assertTrue(dummy_pipe.is_lora_enabled)
+
 
 if __name__ == "__main__":
     unittest.main()

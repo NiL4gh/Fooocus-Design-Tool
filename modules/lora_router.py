@@ -6,7 +6,7 @@ Provides zero-reload switching and automatic trigger word extraction.
 
 import os
 import re
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 
 _loaded_adapters: Dict[str, str] = {}
 _active_adapter: Optional[str] = None
@@ -41,18 +41,48 @@ def get_active_adapter() -> Optional[str]:
     return _active_adapter
 
 
-def clear_adapters(pipeline) -> None:
-    """Disable active LoRA adapters on the pipeline."""
+def clear_adapters(
+    pipeline,
+    base_adapters: Optional[List[str]] = None,
+    base_weights: Optional[List[float]] = None,
+) -> None:
+    """
+    Disable active LoRA adapters on the pipeline or restore base adapters.
+
+    Args:
+        pipeline: Diffusers SDXL pipeline instance or dummy test pipeline.
+        base_adapters: Optional list of adapter names to retain (e.g. ['lightning_fast']).
+        base_weights: Optional list of adapter weights corresponding to base_adapters.
+    """
     global _active_adapter
-    if pipeline is not None and hasattr(pipeline, "disable_lora"):
-        try:
-            pipeline.disable_lora()
-        except Exception as e:
-            print(f"[LoRA Router] Warning disabling LoRA: {e}")
+    if pipeline is not None:
+        if base_adapters:
+            if hasattr(pipeline, "enable_lora"):
+                try:
+                    pipeline.enable_lora()
+                except Exception as e:
+                    print(f"[LoRA Router] Warning enabling LoRA: {e}")
+            if hasattr(pipeline, "set_adapters"):
+                try:
+                    weights = list(base_weights) if base_weights is not None else [1.0] * len(base_adapters)
+                    pipeline.set_adapters(list(base_adapters), adapter_weights=weights)
+                except Exception as e:
+                    print(f"[LoRA Router] Warning setting base adapters: {e}")
+        elif hasattr(pipeline, "disable_lora"):
+            try:
+                pipeline.disable_lora()
+            except Exception as e:
+                print(f"[LoRA Router] Warning disabling LoRA: {e}")
     _active_adapter = None
 
 
-def apply_category_lora(pipeline, category_cfg: Dict[str, Any], force_active: bool = True) -> str:
+def apply_category_lora(
+    pipeline,
+    category_cfg: Dict[str, Any],
+    force_active: bool = True,
+    base_adapters: Optional[List[str]] = None,
+    base_weights: Optional[List[float]] = None,
+) -> str:
     """
     Apply a category's baked LoRA to the pipeline.
 
@@ -60,6 +90,8 @@ def apply_category_lora(pipeline, category_cfg: Dict[str, Any], force_active: bo
         pipeline: Diffusers SDXL pipeline instance or dummy test pipeline.
         category_cfg: Dictionary containing category configuration and optional "lora" block.
         force_active: Whether to activate the adapter immediately.
+        base_adapters: Optional list of base adapter names to preserve (e.g. ['lightning_fast']).
+        base_weights: Optional list of base adapter weights.
 
     Returns:
         The trigger words string to prepend/append to the generation prompt.
@@ -67,7 +99,7 @@ def apply_category_lora(pipeline, category_cfg: Dict[str, Any], force_active: bo
     global _active_adapter, _loaded_adapters
 
     if not category_cfg or "lora" not in category_cfg or not category_cfg["lora"]:
-        clear_adapters(pipeline)
+        clear_adapters(pipeline, base_adapters=base_adapters, base_weights=base_weights)
         return ""
 
     lora_cfg = category_cfg["lora"]
@@ -76,11 +108,20 @@ def apply_category_lora(pipeline, category_cfg: Dict[str, Any], force_active: bo
     trigger_words = lora_cfg.get("trigger_words", "").strip()
 
     if not source:
-        clear_adapters(pipeline)
+        clear_adapters(pipeline, base_adapters=base_adapters, base_weights=base_weights)
         return trigger_words
 
     category_name = category_cfg.get("name", "custom")
     adapter_name = _sanitize_name(category_name)
+
+    # Compute target adapter names and weights atomically
+    if base_adapters:
+        active_names = list(base_adapters) + [adapter_name]
+        default_base_weights = [1.0] * len(base_adapters)
+        active_weights = list(base_weights if base_weights is not None else default_base_weights) + [weight]
+    else:
+        active_names = [adapter_name]
+        active_weights = [weight]
 
     # In mock mode, update internal state without touching torch weights
     if os.environ.get("MOCK_IMAGE_GEN") == "1" or pipeline == "mock_pipeline":
@@ -97,7 +138,7 @@ def apply_category_lora(pipeline, category_cfg: Dict[str, Any], force_active: bo
             if hasattr(pipeline, "enable_lora"):
                 pipeline.enable_lora()
             if hasattr(pipeline, "set_adapters"):
-                pipeline.set_adapters([adapter_name], adapter_weights=[weight])
+                pipeline.set_adapters(active_names, adapter_weights=active_weights)
             _active_adapter = adapter_name
         return trigger_words
 
@@ -121,12 +162,12 @@ def apply_category_lora(pipeline, category_cfg: Dict[str, Any], force_active: bo
             if hasattr(pipeline, "enable_lora"):
                 pipeline.enable_lora()
             if hasattr(pipeline, "set_adapters"):
-                pipeline.set_adapters([adapter_name], adapter_weights=[weight])
+                pipeline.set_adapters(active_names, adapter_weights=active_weights)
             _active_adapter = adapter_name
             print(f"[LoRA Router] Activated adapter '{adapter_name}' with weight {weight}")
 
     except Exception as e:
         print(f"[LoRA Router] Failed to load/set LoRA '{adapter_name}': {e}. Continuing without LoRA.")
-        clear_adapters(pipeline)
+        clear_adapters(pipeline, base_adapters=base_adapters, base_weights=base_weights)
 
     return trigger_words
