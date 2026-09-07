@@ -195,7 +195,8 @@ class TestFooocusDesignTool(unittest.TestCase):
             concept_grid=False,
             aspect_ratio="1024×1024 (1:1)",
             seed_val="42",
-            speed_mode_label="⚡ Fast (~3s)"
+            speed_mode_label="⚡ Fast (~3s)",
+            selected_styles=[]
         )
         steps = list(gen)
         self.assertGreater(len(steps), 0)

@@ -11,6 +11,7 @@ from modules.design_categories import get_category_names, get_category, get_defa
 from modules.auto_prompt_enhancer import enhance_prompt, build_negative_prompt
 from modules.palette_control import inject_palette_prompt, apply_palette_post
 from modules.sdxl_pipeline import generate as sdxl_generate
+from modules.style_engine import get_available_styles
 from modules import config
 
 
@@ -26,7 +27,8 @@ def _save_image(image, output_dir, fmt='png'):
 
 
 def _generate(category, prompt, negative_prompt, color1, color2, color3, color4, color5,
-              use_master_neg, use_enhancement, remove_bg, vector_mode, concept_grid, aspect_ratio, seed_val, speed_mode_label):
+              use_master_neg, use_enhancement, remove_bg, vector_mode, concept_grid, aspect_ratio, seed_val, speed_mode_label,
+              selected_styles=None):
     """Core generation function wired to the Generate button."""
 
     if not prompt.strip() and not category:
@@ -38,9 +40,7 @@ def _generate(category, prompt, negative_prompt, color1, color2, color3, color4,
     cat_cfg = get_category(category) if category else None
 
     # Build final prompts
-    final_prompt = prompt
-    if use_enhancement and category:
-        final_prompt = enhance_prompt(prompt, category, use_enhancement=True)
+    final_prompt = enhance_prompt(prompt, category, use_enhancement=use_enhancement, selected_styles=selected_styles)
     
     # Inject concept grid layout instruction if enabled
     if concept_grid:
@@ -52,7 +52,7 @@ def _generate(category, prompt, negative_prompt, color1, color2, color3, color4,
     if colors:
         final_prompt = inject_palette_prompt(final_prompt, colors)
 
-    final_negative = build_negative_prompt(negative_prompt, category, use_master_neg)
+    final_negative = build_negative_prompt(negative_prompt, category, use_master_negative=use_master_neg, selected_styles=selected_styles)
 
     # Parse aspect ratio
     width, height = config.parse_aspect_ratio(aspect_ratio)
@@ -131,11 +131,12 @@ def _generate(category, prompt, negative_prompt, color1, color2, color3, color4,
 def _on_category_change(category):
     """Update UI defaults when category changes."""
     if not category:
-        return gr.update(), gr.update(), gr.update()
+        return gr.update(), gr.update(), gr.update(), gr.update()
     
     transparent = get_default_transparent(category)
     ar = get_default_aspect_ratio(category)
     icon = get_category_icon(category)
+    default_styles = ["Fooocus V2"] if category in ["Artwork", "Poster"] else []
     
     # Find matching aspect ratio label
     ar_labels = config.get_aspect_ratio_labels()
@@ -147,7 +148,7 @@ def _on_category_change(category):
             selected_ar = label
             break
 
-    return gr.update(value=transparent), gr.update(value=selected_ar), gr.update()
+    return gr.update(value=transparent), gr.update(value=selected_ar), gr.update(), gr.update(value=default_styles)
 
 
 def build_tab():
@@ -172,6 +173,14 @@ def build_tab():
                 value="⚡ Fast (~3s)",
                 interactive=True,
                 elem_id="speed_choice_radio",
+            )
+            styles_selector = gr.Dropdown(
+                label="🎨 Fooocus Styles",
+                choices=get_available_styles(),
+                value=[],
+                multiselect=True,
+                interactive=True,
+                elem_id="styles_dropdown",
             )
             prompt = gr.Textbox(
                 label='✨ Prompt',
@@ -221,15 +230,20 @@ def build_tab():
                                  object_fit='contain', elem_id='output_gallery')
  
     # Wire events
-    category.change(_on_category_change, inputs=[category],
-                     outputs=[remove_bg, aspect_ratio, status])
+    category.change(
+        _on_category_change,
+        inputs=[category],
+        outputs=[remove_bg, aspect_ratio, status, styles_selector],
+    )
  
     generate_btn.click(
         _generate,
-        inputs=[category, prompt, negative_prompt,
-                color1, color2, color3, color4, color5,
-                use_master_neg, use_enhancement, remove_bg, vector_mode, concept_grid,
-                aspect_ratio, seed_val, speed_choice],
+        inputs=[
+            category, prompt, negative_prompt,
+            color1, color2, color3, color4, color5,
+            use_master_neg, use_enhancement, remove_bg, vector_mode, concept_grid,
+            aspect_ratio, seed_val, speed_choice, styles_selector
+        ],
         outputs=[status, preview, gallery]
     )
  
