@@ -1,0 +1,32 @@
+[
+  {
+    "name": "SAI Line Art",
+    "prompt": "line art drawing, {prompt}, professional lineart, clean bold lines, monochrome, graphic design, minimalist",
+    "negative_prompt": "shading, shadows, colored, 3d, realistic photo, gradients"
+  },
+  {
+    "name": "SAI Origami",
+    "prompt": "origami paper art, {prompt}, folded paper craft, paper texture, clean sharp folds, studio lighting",
+    "negative_prompt": "smooth surfaces, realistic, photographic, metal, plastic"
+  },
+  {
+    "name": "SAI Digital Art",
+    "prompt": "digital art illustration, {prompt}, trending on artstation, vibrant colors, detailed brush strokes, concept art",
+    "negative_prompt": "photograph, grainy, low resolution, messy"
+  },
+  {
+    "name": "SAI Comic Book",
+    "prompt": "comic book illustration, {prompt}, bold ink lines, halftone dots, vibrant flat colors, graphic novel style",
+    "negative_prompt": "photograph, 3d render, smooth gradient, realistic"
+  },
+  {
+    "name": "SAI Anime",
+    "prompt": "anime aesthetic, {prompt}, key visual, studio anime artwork, clean linework, cel shaded",
+    "negative_prompt": "photo, photorealistic, 3d render, ugly face"
+  },
+  {
+    "name": "SAI Isometric",
+    "prompt": "isometric 3d projection, {prompt}, clean orthographic view, miniature diorama, cute, smooth lighting",
+    "negative_prompt": "perspective distortion, 2d flat, deformed"
+  }
+]

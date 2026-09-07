@@ -1,0 +1,17 @@
+[
+  {
+    "name": "MRE Flat 2D Art",
+    "prompt": "flat 2d art illustration, {prompt}, solid colors, clean outlines, minimalist vector aesthetic, graphic asset",
+    "negative_prompt": "3d render, photorealistic, realistic, shadows, gradients, specular"
+  },
+  {
+    "name": "MRE Vector Art",
+    "prompt": "scalable vector graphic art, {prompt}, clean paths, high contrast, smooth contours, commercial design element",
+    "negative_prompt": "photo, texture, noise, blurry, complex shading, 3d"
+  },
+  {
+    "name": "MRE Watercolor",
+    "prompt": "expressive watercolor painting, {prompt}, paint bleed, wet paper texture, artistic pigment stains, soft edges",
+    "negative_prompt": "photograph, 3d, hard plastic, vector"
+  }
+]

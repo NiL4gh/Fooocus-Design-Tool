@@ -1,0 +1,22 @@
+[
+  {
+    "name": "Fooocus V2",
+    "prompt": "{prompt}, highly detailed, sharp focus, professional composition",
+    "negative_prompt": "ugly, deformed, disfigured, poor details, bad anatomy"
+  },
+  {
+    "name": "Fooocus Masterpiece",
+    "prompt": "masterpiece, best quality, {prompt}, intricate details, elegant",
+    "negative_prompt": "worst quality, low quality, normal quality, lowres, text, watermark"
+  },
+  {
+    "name": "Fooocus Photograph",
+    "prompt": "professional photography, natural lighting, {prompt}, 35mm lens, sharp, highly detailed, raw photo",
+    "negative_prompt": "illustration, 3d render, painting, drawing, cartoon, anime, artificial"
+  },
+  {
+    "name": "Fooocus Cinematic",
+    "prompt": "cinematic still, {prompt}, dramatic lighting, 8k resolution, photorealistic, block buster movie atmosphere",
+    "negative_prompt": "amateur, low quality, oversaturated, blurry, cartoon"
+  }
+]
