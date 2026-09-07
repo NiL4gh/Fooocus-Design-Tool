@@ -34,7 +34,7 @@ def _generate(category, prompt, negative_prompt, color1, color2, color3, color4,
         return
 
     # Parse speed mode and category config
-    speed_mode = "fast" if "Fast" in str(speed_mode_label) else "master"
+    speed_mode = "fast" if "fast" in str(speed_mode_label).lower() else "master"
     cat_cfg = get_category(category) if category else None
 
     # Build final prompts

@@ -4,6 +4,7 @@ Design Edit Tab — Simplified inpainting/outpainting for design modification.
 import gradio as gr
 import os, time, random
 from modules import config
+from modules.sdxl_pipeline import generate as sdxl_generate, load_pipeline
 
 
 def _edit_generate(edit_image, edit_prompt, edit_negative, edit_strength):
@@ -15,20 +16,8 @@ def _edit_generate(edit_image, edit_prompt, edit_negative, edit_strength):
     yield "🔄 Loading pipeline for editing...", None, []
 
     try:
-        from modules.zimage_pipeline import load_pipeline
-        import torch
         from PIL import Image
         import numpy as np
-
-        pipe = load_pipeline()
-
-        # For diffusers-based editing, we use img2img pipeline
-        yield "✏️ Editing image...", None, []
-
-        from diffusers import AutoPipelineForImage2Image
-        
-        # Load img2img variant
-        img2img_pipe = AutoPipelineForImage2Image.from_pipe(pipe)
 
         # Prepare image
         if isinstance(edit_image, np.ndarray):
@@ -38,20 +27,38 @@ def _edit_generate(edit_image, edit_prompt, edit_negative, edit_strength):
 
         edit_pil = edit_pil.convert('RGB').resize((1024, 1024))
 
-        seed = random.randint(0, 2**32 - 1)
-        generator = torch.Generator(device="cpu").manual_seed(seed)
+        if os.environ.get("MOCK_IMAGE_GEN") == "1":
+            image, seed = sdxl_generate(
+                prompt=edit_prompt or "same image, improved",
+                negative_prompt=edit_negative or "",
+                speed_mode="fast"
+            )
+        else:
+            import torch
+            from diffusers import AutoPipelineForImage2Image
 
-        result = img2img_pipe(
-            prompt=edit_prompt or "same image, improved",
-            negative_prompt=edit_negative or "",
-            image=edit_pil,
-            strength=edit_strength,
-            num_inference_steps=4,
-            guidance_scale=0.0,
-            generator=generator,
-        )
+            pipe = load_pipeline(speed_mode="fast")
 
-        image = result.images[0]
+            # For diffusers-based editing, we use img2img pipeline
+            yield "✏️ Editing image...", None, []
+
+            # Load img2img variant
+            img2img_pipe = AutoPipelineForImage2Image.from_pipe(pipe)
+
+            seed = random.randint(0, 2**32 - 1)
+            generator = torch.Generator(device="cpu").manual_seed(seed)
+
+            result = img2img_pipe(
+                prompt=edit_prompt or "same image, improved",
+                negative_prompt=edit_negative or "",
+                image=edit_pil,
+                strength=edit_strength,
+                num_inference_steps=6,
+                guidance_scale=1.8,
+                generator=generator,
+            )
+
+            image = result.images[0]
 
         os.makedirs(config.OUTPUT_DIR, exist_ok=True)
         filepath = os.path.join(config.OUTPUT_DIR, f"edit_{int(time.time()*1000)}.png")

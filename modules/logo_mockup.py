@@ -1,6 +1,6 @@
 """
 Logo Mockup Module
-Dynamic logo-on-product mockup generation using Z-Image-Turbo and PIL compositing.
+Dynamic logo-on-product mockup generation using SDXL Juggernaut XL and PIL compositing.
 Supports customizable layout styles (Single, Bento Knolling, Realistic Ambient).
 """
 import os
@@ -107,9 +107,9 @@ def apply_shading_blend(logo_rgb, bg_crop_rgb):
     return Image.fromarray(soft_light)
 
 
-def generate_mockup(logo_image, product_type, prompt="", mockup_style="Single Product (Centered)", progress_cb=None, model_name="FLUX.1-schnell"):
+def generate_mockup(logo_image, product_type, prompt="", mockup_style="Single Product (Centered)", progress_cb=None, model_name=None, speed_mode="fast"):
     """
-    Generate a dynamic product mockup using Z-Image-Turbo or FLUX.1-schnell, then place and blend the logo.
+    Generate a dynamic product mockup using SDXL Juggernaut XL, then place and blend the logo.
     
     Args:
         logo_image: PIL Image or numpy array of the logo.
@@ -117,7 +117,8 @@ def generate_mockup(logo_image, product_type, prompt="", mockup_style="Single Pr
         prompt: Optional custom scene description prompt.
         mockup_style: String, layout style (Single, Bento, or Ambient).
         progress_cb: Callable(msg) for UI progress updates.
-        model_name: The name of the model to use.
+        model_name: Legacy model choice argument (kept for backward compatibility).
+        speed_mode: "fast" (SDXL-Lightning) or "master" (Juggernaut XL).
         
     Returns:
         (mockup_image, status_message)
@@ -172,22 +173,22 @@ def generate_mockup(logo_image, product_type, prompt="", mockup_style="Single Pr
 
     neg_prompt = "logo, text, logo graphic, branding, writing, watermark, pattern, print, low quality, blurry, deformed"
 
-    # 3. Generate the mockup scene using Z-Image-Turbo
+    # 3. Generate the mockup scene using SDXL Juggernaut XL
     if progress_cb:
         progress_cb(f"🎨 Generating {mockup_style} background using AI...")
 
     try:
-        from modules.zimage_pipeline import generate as zimage_generate
+        from modules.sdxl_pipeline import generate as sdxl_generate
 
         # Generate (standard 1024x1024)
-        mockup_bg, seed = zimage_generate(
+        mockup_bg, seed = sdxl_generate(
             prompt=mockup_prompt,
             negative_prompt=neg_prompt,
             width=1024,
             height=1024,
             seed=-1,
+            speed_mode=speed_mode,
             progress_callback=None,
-            model_name=model_name
         )
     except Exception as e:
         return None, f"❌ Failed to generate mockup background scene: {str(e)}"

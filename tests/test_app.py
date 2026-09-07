@@ -90,8 +90,6 @@ class TestFooocusDesignTool(unittest.TestCase):
         pipe = load_pipeline()
         self.assertEqual(pipe, "mock_pipeline")
 
-    test_zimage_pipeline_mock = test_sdxl_pipeline_mock
-
     def test_starvector_mock(self):
         """Test mock vectorization creates valid SVGs."""
         img = Image.new("RGB", (100, 100), color="#0f172a")

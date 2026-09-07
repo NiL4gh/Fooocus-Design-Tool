@@ -1,6 +1,6 @@
 """
-Fooocus Design Tool — Google Colab Setup Script
-Run this in a Colab cell to set up and launch the tool.
+Fooocus Designer 2.0 — Google Colab Setup Script
+Run this in a Colab cell to set up and launch Fooocus Designer 2.0.
 """
 import subprocess
 import sys
@@ -8,7 +8,7 @@ import os
 
 def setup_and_launch(share=True, use_ngrok=False, ngrok_token=None):
     """
-    Set up and launch Fooocus Design Tool on Google Colab.
+    Set up and launch Fooocus Designer 2.0 on Google Colab.
     
     Args:
         share: Use Gradio's built-in sharing (default True).
@@ -16,7 +16,9 @@ def setup_and_launch(share=True, use_ngrok=False, ngrok_token=None):
         ngrok_token: Your ngrok auth token (required if use_ngrok=True).
     """
     print("=" * 60)
-    print("🎨 Fooocus Design Tool — Colab Setup")
+    print("🎨 Fooocus Designer 2.0 — Colab Setup")
+    print("   Engine: RunDiffusion/Juggernaut-XL-v9 (SDXL) + Baked LoRAs")
+    print("   Performance: ⚡ Fast (~3s Lightning) | 🎯 Master (~15s SDXL)")
     print("=" * 60)
 
     # Check if already cloned
@@ -53,7 +55,7 @@ def setup_and_launch(share=True, use_ngrok=False, ngrok_token=None):
         print(f"🌐 Public URL: {tunnel.public_url}")
 
     # Launch
-    print("\n🚀 Launching Fooocus Design Tool...")
+    print("\n🚀 Launching Fooocus Designer 2.0...")
     print("=" * 60)
 
     if share:

@@ -280,6 +280,7 @@ def generate_variations(
     speed_mode: str = "fast",
     category_cfg: Optional[Dict[str, Any]] = None,
     progress_callback=None,
+    **kwargs,
 ) -> List[Tuple[Image.Image, int]]:
     """Generate multiple variations of a design asset with seed spread."""
     if base_seed is None or base_seed == -1:

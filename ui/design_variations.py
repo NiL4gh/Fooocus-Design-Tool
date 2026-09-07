@@ -12,19 +12,21 @@ def _gen_variations(prompt, negative, var_count, var_strength, seed_val, model_c
         yield "⚠️ Please enter a prompt.", []
         return
 
-    yield f"🔄 Generating variations using {model_choice}...", []
+    yield "🔄 Generating variations...", []
 
     try:
-        from modules.zimage_pipeline import generate_variations
+        from modules.sdxl_pipeline import generate_variations
 
         seed = int(seed_val) if seed_val and str(seed_val).strip() != '-1' else None
         count = int(var_count)
+        speed = "fast" if "fast" in str(model_choice).lower() or "schnell" in str(model_choice).lower() else "master"
 
         results = generate_variations(
-            prompt=prompt, negative_prompt=negative,
-            base_seed=seed, count=count,
-            variation_strength=int(var_strength),
-            model_name=model_choice,
+            prompt=prompt,
+            negative_prompt=negative,
+            base_seed=seed,
+            count=count,
+            speed_mode=speed,
         )
 
         paths = []
@@ -47,9 +49,9 @@ def build_tab():
         with gr.Column(scale=2):
             var_prompt = gr.Textbox(label='✨ Prompt', placeholder='Enter the base prompt...', lines=3)
             var_model_choice = gr.Dropdown(
-                label="🤖 AI Model",
-                choices=["FLUX.1-schnell", "Z-Image-Turbo"],
-                value="FLUX.1-schnell",
+                label="⚡ Speed Mode",
+                choices=["⚡ Fast (SDXL Lightning)", "🎯 Master (Juggernaut XL)"],
+                value="⚡ Fast (SDXL Lightning)",
                 interactive=True,
                 elem_id="var_model_dropdown"
             )
