@@ -82,3 +82,12 @@ def get_category_icon(name):
     if cat:
         return cat.get('icon', '🎨')
     return '🎨'
+
+
+def get_category_lora(name: str):
+    """Get the baked LoRA configuration for a category, if any."""
+    cat = get_category(name)
+    if cat and "lora" in cat and cat["lora"]:
+        return cat["lora"]
+    return None
+

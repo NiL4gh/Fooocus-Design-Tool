@@ -6,7 +6,12 @@
       "prompt_enhancement": "isolated solid black silhouette, flat design, clean vector style, sharp edges, high contrast, minimalist, clean SVG path vector, clip art, graphic asset, professional commercial asset",
       "default_transparent": true,
       "default_aspect_ratio": "1024*1024",
-      "icon": "👤"
+      "icon": "👤",
+      "lora": {
+        "source": "DoctorDiffusion/doctor-diffusion-s-stylized-silhouette-photography-xl-lora",
+        "weight": 0.9,
+        "trigger_words": "solid black silhouette, vector style"
+      }
     },
     {
       "name": "Adobe Stock Flat Vector",
@@ -14,7 +19,12 @@
       "prompt_enhancement": "flat minimalist vector graphic, clean vector style, solid colors, smooth clean outlines, isolated, commercial graphic asset, Adobe Stock style vector, scalable graphic element, 2d illustration",
       "default_transparent": true,
       "default_aspect_ratio": "1024*1024",
-      "icon": "💎"
+      "icon": "💎",
+      "lora": {
+        "source": "DoctorDiffusion/doctor-diffusion-s-controllable-vector-art-xl-lora",
+        "weight": 0.85,
+        "trigger_words": "flat minimalist vector graphic, vector art style"
+      }
     },
     {
       "name": "Adobe Stock Sticker/Clipart",
@@ -22,7 +32,12 @@
       "prompt_enhancement": "die-cut sticker design, clean white border, cute clipart asset, flat color vector illustration, isolated white background, commercial graphic asset, clean paths, vector patch, high contrast",
       "default_transparent": true,
       "default_aspect_ratio": "1024*1024",
-      "icon": "🏷️"
+      "icon": "🏷️",
+      "lora": {
+        "source": "artificialguybr/StickersRedmond",
+        "weight": 0.8,
+        "trigger_words": "die-cut sticker, white contour border"
+      }
     },
     {
       "name": "Adobe Stock Seamless Pattern",
@@ -30,7 +45,8 @@
       "prompt_enhancement": "seamless repeating pattern, vector illustration tile, beautiful continuous design element, isolated motif, commercial textile backdrop, flat design, high resolution, symmetrical tileable",
       "default_transparent": false,
       "default_aspect_ratio": "1024*1024",
-      "icon": "🌀"
+      "icon": "🌀",
+      "lora": null
     },
     {
       "name": "Logo",
@@ -38,7 +54,12 @@
       "prompt_enhancement": "minimalist logo design, flat vector style, scalable, clean lines, professional branding, centered composition, high contrast",
       "default_transparent": true,
       "default_aspect_ratio": "1024*1024",
-      "icon": "🎯"
+      "icon": "🎯",
+      "lora": {
+        "source": "artificialguybr/LogoRedmond-LogoLoraForSDXL-V2",
+        "weight": 0.8,
+        "trigger_words": "clean branding vector logo, centered composition"
+      }
     },
     {
       "name": "Poster",
@@ -46,7 +67,8 @@
       "prompt_enhancement": "professional poster design, high resolution, print quality, graphic design, vivid colors, bold composition, editorial layout",
       "default_transparent": false,
       "default_aspect_ratio": "768*1280",
-      "icon": "📰"
+      "icon": "📰",
+      "lora": null
     },
     {
       "name": "Banner",
@@ -54,7 +76,8 @@
       "prompt_enhancement": "web banner design, wide format, professional, clean layout, modern design, digital marketing, high resolution",
       "default_transparent": false,
       "default_aspect_ratio": "1536*640",
-      "icon": "🖼️"
+      "icon": "🖼️",
+      "lora": null
     },
     {
       "name": "Vector Silhouette",
@@ -62,7 +85,12 @@
       "prompt_enhancement": "black silhouette on white background, clean vector style, flat design, sharp edges, minimalist, icon design, scalable graphic",
       "default_transparent": true,
       "default_aspect_ratio": "1024*1024",
-      "icon": "✂️"
+      "icon": "✂️",
+      "lora": {
+        "source": "DoctorDiffusion/doctor-diffusion-s-stylized-silhouette-photography-xl-lora",
+        "weight": 0.9,
+        "trigger_words": "solid black silhouette, minimalist icon"
+      }
     },
     {
       "name": "Artwork",
@@ -70,7 +98,8 @@
       "prompt_enhancement": "professional digital artwork, high quality illustration, detailed, artistic, beautiful composition, vibrant colors, concept art quality",
       "default_transparent": false,
       "default_aspect_ratio": "1024*1024",
-      "icon": "🎨"
+      "icon": "🎨",
+      "lora": null
     },
     {
       "name": "Stock Image",
@@ -78,7 +107,8 @@
       "prompt_enhancement": "professional stock photography style, high resolution, commercial quality, well-lit, clean composition, editorial quality, authentic",
       "default_transparent": false,
       "default_aspect_ratio": "1152*896",
-      "icon": "📷"
+      "icon": "📷",
+      "lora": null
     },
     {
       "name": "Stock Image Mockup",
@@ -86,7 +116,8 @@
       "prompt_enhancement": "professional product mockup, studio photography, clean background, commercial quality, realistic lighting, professional presentation",
       "default_transparent": false,
       "default_aspect_ratio": "1024*1024",
-      "icon": "📦"
+      "icon": "📦",
+      "lora": null
     },
     {
       "name": "Edit Design/Photo",
@@ -94,7 +125,8 @@
       "prompt_enhancement": "",
       "default_transparent": false,
       "default_aspect_ratio": "1024*1024",
-      "icon": "✏️"
+      "icon": "✏️",
+      "lora": null
     },
     {
       "name": "Variation",
@@ -102,7 +134,8 @@
       "prompt_enhancement": "",
       "default_transparent": false,
       "default_aspect_ratio": "1024*1024",
-      "icon": "🔄"
+      "icon": "🔄",
+      "lora": null
     }
   ]
 }
