@@ -12,6 +12,7 @@
 |---------|-------------|
 | **⚡ Dual-Speed Modes** | ⚡ **Fast** (~3s via SDXL-Lightning 4-step) vs 🎯 **Master** (~15s via Juggernaut XL 25-step) |
 | **🎯 Baked Design LoRAs** | Automated adapter routing for Silhouettes, Flat Vectors, Stickers, and Logos |
+| **🎨 Fooocus Style Engine** | Multi-style `{prompt}` interpolation and negative stacking (`Fooocus V2`, `SAI Line Art`, `MRE Flat 2D Art`, etc.) |
 | **🎨 Design Categories** | Adobe Stock presets (Silhouette, Flat Vector), Logo, Poster, Banner, Artwork, Sticker, Mockup |
 | **🧠 Auto Prompt Enhancement** | Category-specific keywords and trigger words automatically improve your results |
 | **🚫 Master Negative Prompts** | Per-category negative prompts eliminate common artifacts and 3D rendering clutter |
@@ -71,16 +72,54 @@ Or use the provided `colab_setup.py`:
 
 ---
 
+## 🎨 Fooocus Style Engine & Style Presets
+
+Fooocus Designer 2.0 incorporates the Fooocus Style Engine, driven by template JSON files located in `config/sdxl_styles/*.json` (including the Fooocus, SAI, and MRE style collections).
+
+### How It Works
+- **Multi-Style Interpolation**: Select multiple styles concurrently. Each style's positive prompt template injects the prompt text into `{prompt}` sequentially.
+- **Negative Prompt Stacking**: Automatically stacks each selected style's negative additions with category-specific master negative prompts while deduplicating and cleanly stripping commas.
+- **Zero Hallucination / Native Diffusers**: Runs directly on SDXL prompt conditioning without altering network weights or slowing down inference.
+
+### Available Styles
+Loaded dynamically from `config/sdxl_styles/*.json`:
+
+| Style | Collection | Description |
+|-------|------------|-------------|
+| **Fooocus V2** | Fooocus | Flagship aesthetic expansion; boosts detail, composition, and realistic lighting |
+| **Fooocus Masterpiece** | Fooocus | Artistic flair with rich textures, fine details, and painterly quality |
+| **Fooocus Photograph** | Fooocus | Photorealistic camera parameters, natural skin tones, and lighting |
+| **Fooocus Negative** | Fooocus | Comprehensive artifact reduction and rendering cleanup |
+| **Fooocus Cinematic** | Fooocus | Dramatic cinematic lighting, anamorphic lens flares, and film contrast |
+| **SAI Line Art** | Stability AI | Clean, crisp contour lines, minimalist line-drawing aesthetic, ink outlines |
+| **SAI Digital Art** | Stability AI | Vibrant, modern digital illustration styling |
+| **SAI Flat Color** | Stability AI | Flat color fills, reduced gradients, clean vector aesthetic |
+| **SAI Origami** | Stability AI | Geometric folded paper style with clean dimensional shadows |
+| **MRE Flat 2D Art** | MRE | Pure 2D flat design, crisp vector silhouettes, minimal shading |
+| **MRE Comic Art** | MRE | Dynamic comic ink, cel-shading, and narrative illustration flair |
+
+### 🧠 Smart Category Presets
+The UI intelligently configures style defaults based on the chosen category:
+- **Clean Vector & Silhouette Categories** (`Adobe Stock Silhouette`, `Adobe Stock Flat Vector`, `Logo`, `Sticker`):
+  Isolate prompt tags and LoRA adapters by leaving style checkboxes unchecked by default. This prevents photorealistic or 3D shading bleed from compromising clean vector lines and cutouts.
+- **Artwork & Poster Categories** (`Artwork`, `Poster`):
+  Automatically enable **Fooocus V2** by default for rich compositional depth, cinematic lighting, and enhanced visual detail.
+- **Full Customizability**: Users can freely select, combine, or deselect any combination of styles in the UI accordion at any time.
+
+---
+
 ## ⚙️ Architecture
 
 ```
 Fooocus-Design-Tool/
 ├── config/
-│   └── design_categories.json    # Category configurations & baked LoRAs
+│   ├── design_categories.json    # Category configurations & baked LoRAs
+│   └── sdxl_styles/              # Fooocus, SAI, and MRE style JSON templates
 ├── modules/
 │   ├── config.py                 # App configuration & aspect ratios
 │   ├── sdxl_pipeline.py          # Primary SDXL Diffusers Engine (Juggernaut XL)
 │   ├── lora_router.py            # LoRA loading, switching & weight management
+│   ├── style_engine.py           # Multi-style prompt interpolation & negative stacking
 │   ├── design_categories.py      # Category & LoRA metadata loader
 │   ├── auto_prompt_enhancer.py   # Category prompt enhancement & negative builder
 │   ├── palette_control.py        # Color palette prompt injection & post-processing

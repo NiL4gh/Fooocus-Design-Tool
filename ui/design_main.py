@@ -7,7 +7,7 @@ import os
 import time
 import random
 
-from modules.design_categories import get_category_names, get_category, get_default_transparent, get_default_aspect_ratio, get_category_icon
+from modules.design_categories import get_category_names, get_category, get_default_transparent, get_default_aspect_ratio
 from modules.auto_prompt_enhancer import enhance_prompt, build_negative_prompt
 from modules.palette_control import inject_palette_prompt, apply_palette_post
 from modules.sdxl_pipeline import generate as sdxl_generate
@@ -135,7 +135,6 @@ def _on_category_change(category):
     
     transparent = get_default_transparent(category)
     ar = get_default_aspect_ratio(category)
-    icon = get_category_icon(category)
     default_styles = ["Fooocus V2"] if category in ["Artwork", "Poster"] else []
     
     # Find matching aspect ratio label

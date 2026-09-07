@@ -1,4 +1,4 @@
-﻿"""
+"""
 Style Engine Module — Fooocus Designer 2.0
 Loads Fooocus, SAI, and MRE style definitions from JSON templates and applies
 multi-style {prompt} interpolation and negative prompt stacking.
@@ -88,13 +88,14 @@ def apply_styles(
 
     styles = load_styles()
     current_positive = prompt.strip()
-    negative_parts = [negative_prompt.strip()] if negative_prompt.strip() else []
+    cleaned_neg = negative_prompt.strip().rstrip(",").strip()
+    negative_parts = [cleaned_neg] if cleaned_neg else []
 
     for name in style_names:
         if name in styles:
             style_cfg = styles[name]
             p_template = style_cfg.get("prompt", "{prompt}")
-            n_addition = style_cfg.get("negative_prompt", "").strip()
+            n_addition = style_cfg.get("negative_prompt", "").strip().rstrip(",").strip()
 
             # Substitute {prompt} token
             if "{prompt}" in p_template:
