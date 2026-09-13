@@ -45,16 +45,19 @@ The UI will open at `http://localhost:7865`
 
 ### Google Colab (Free T4 GPU)
 
+Run in a single Colab notebook cell for 1-click automated setup and launch:
 ```python
+# 1-Click Setup & Launch
 !git clone https://github.com/NiL4gh/Fooocus-Design-Tool.git
 %cd Fooocus-Design-Tool
-!pip install -r requirements.txt -q
-!python launch.py --share
+!python colab_setup.py
 ```
 
-Or use the provided `colab_setup.py`:
-```python
-!python colab_setup.py
+Optional bootstrapper flags:
+```bash
+!python colab_setup.py --preload        # Pre-download SDXL model weights for instant generation
+!python colab_setup.py --ngrok --ngrok-token <YOUR_TOKEN>  # Use ngrok tunnel instead of Gradio share
+!python colab_setup.py --demo           # Run in lightweight mock demo mode (no GPU required)
 ```
 
 ---

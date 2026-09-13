@@ -82,9 +82,15 @@ print('[Fooocus Design Tool] Dependencies OK. Launching UI...')
 # Import and launch
 from webui import app
 
+is_colab = bool(os.environ.get("COLAB_GPU") or os.environ.get("COLAB_RELEASE_TAG"))
+server_name = "0.0.0.0" if (is_colab or "--share" in sys.argv or "--listen" in sys.argv) else "127.0.0.1"
+share_flag = ("--share" in sys.argv or is_colab or "--no-share" not in sys.argv)
+inbrowser_flag = ("--no-browser" not in sys.argv and not is_colab)
+port = int(os.environ.get("GRADIO_SERVER_PORT", "7865"))
+
 app.queue().launch(
-    server_name="127.0.0.1",
-    server_port=int(os.environ.get("GRADIO_SERVER_PORT", "7865")),
-    share=True,
-    inbrowser="--no-browser" not in sys.argv,
+    server_name=server_name,
+    server_port=port,
+    share=share_flag,
+    inbrowser=inbrowser_flag,
 )
