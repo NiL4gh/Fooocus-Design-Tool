@@ -109,6 +109,69 @@ class TestEndToEndSystem(unittest.TestCase):
         invalid_style = get_style("Nonexistent Style XYZ")
         self.assertIsNone(invalid_style)
 
+    def test_end_to_end_metadata_and_palette_workflow(self):
+        """Verify full end-to-end generation with metadata embedding and drag-and-drop recovery."""
+        from ui.design_main import _generate, _on_image_drop_inspect, _on_palette_preset_change
+        from modules.metadata_manager import extract_metadata
+        from modules.palette_control import get_preset_colors
+        from PIL import Image
+
+        # 1. Select a palette preset
+        colors = get_preset_colors("Cyberpunk Neon")
+        self.assertEqual(len(colors), 5)
+        self.assertEqual(colors[0], "#00F0FF")
+
+        # 2. Run generation with metadata
+        gen = _generate(
+            category="Adobe Stock Flat Vector",
+            prompt="futuristic neon tiger",
+            negative_prompt="photorealistic, 3D",
+            color1=colors[0], color2=colors[1], color3=colors[2], color4=colors[3], color5=colors[4],
+            use_master_neg=True,
+            use_enhancement=True,
+            remove_bg=True,
+            vector_mode=False,
+            concept_grid=False,
+            aspect_ratio="1024×1024 (1:1)",
+            seed_val="12345",
+            speed_mode_label="⚡ Fast (~3s)",
+            selected_styles=["Fooocus V2"],
+        )
+        steps = list(gen)
+        status, out_img, paths = steps[-1]
+        self.assertIn("Done", status)
+        self.assertEqual(len(paths), 1)
+        saved_file = paths[0]
+        self.assertTrue(os.path.exists(saved_file))
+
+        # 3. Verify metadata was embedded in saved PNG
+        meta = extract_metadata(saved_file)
+        self.assertIsNotNone(meta)
+        self.assertEqual(meta["category"], "Adobe Stock Flat Vector")
+        self.assertEqual(meta["prompt"], "futuristic neon tiger")
+        self.assertEqual(meta["seed"], 12345)
+        self.assertEqual(meta["speed_mode"], "fast")
+        self.assertEqual(meta["selected_styles"], ["Fooocus V2"])
+        self.assertIn("#00F0FF", meta["colors"])
+
+        # 4. Simulate dropping image into UI inspect handler
+        res = _on_image_drop_inspect(saved_file)
+        inspect_status, cat_upd, pr_upd, neg_upd, spd_upd, stl_upd, sd_upd, c1, c2, c3, c4, c5 = res
+        self.assertIn("Loaded settings", inspect_status)
+        self.assertEqual(cat_upd["value"], "Adobe Stock Flat Vector")
+        self.assertEqual(pr_upd["value"], "futuristic neon tiger")
+        self.assertEqual(neg_upd["value"], "photorealistic, 3D")
+        self.assertEqual(spd_upd["value"], "⚡ Fast (~3s)")
+        self.assertEqual(stl_upd["value"], ["Fooocus V2"])
+        self.assertEqual(sd_upd["value"], "12345")
+        self.assertEqual(c1["value"], "#00F0FF")
+
+        # Cleanup
+        try:
+            os.remove(saved_file)
+        except Exception:
+            pass
+
 
 if __name__ == "__main__":
     unittest.main()

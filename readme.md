@@ -10,17 +10,18 @@
 
 | Feature | Description |
 |---------|-------------|
-| **⚡ Dual-Speed Modes** | ⚡ **Fast** (~3s via SDXL-Lightning 4-step) vs 🎯 **Master** (~15s via Juggernaut XL 25-step) |
+| **⚡ Harmonized Dual-Speed** | ⚡ **Fast** (~3s via SDXL-Lightning 4-step) vs 🎯 **Master** (~15s via Juggernaut XL 25-step) unified across Generate, Mockup, Edit, and Variations tabs |
 | **🎯 Baked Design LoRAs** | Automated adapter routing for Silhouettes, Flat Vectors, Stickers, and Logos |
 | **🎨 Fooocus Style Engine** | Multi-style `{prompt}` interpolation and negative stacking (`Fooocus V2`, `SAI Line Art`, `MRE Flat 2D Art`, etc.) |
 | **🎨 Design Categories** | Adobe Stock presets (Silhouette, Flat Vector), Logo, Poster, Banner, Artwork, Sticker, Mockup |
 | **🧠 Auto Prompt Enhancement** | Category-specific keywords and trigger words automatically improve your results |
 | **🚫 Master Negative Prompts** | Per-category negative prompts eliminate common artifacts and 3D rendering clutter |
-| **🎨 Color Palette Control** | Inject hex colors into generation via prompt engineering + post-processing |
+| **🎨 Color Palette Presets** | 8 curated commercial color palettes (Cyberpunk, Retro, Boho, Pastel, etc.) + custom hex picking |
+| **📥 Metadata & Drop-to-Load** | Embeds generation parameters in PNG `tEXt` chunks; drag-and-drop to restore prompts, seeds, styles & colors |
 | **🔲 Transparent PNG** | Automatic background removal (rembg) for logos, silhouettes, and icons |
 | **✏️ Vector Mode (SVG)** | Convert rasters to lossless SVG using StarVector-1B |
-| **✏️ Design Editing** | Simplified inpaint/img2img editing with strength control |
-| **🔄 Variations** | Generate 2-4 similar designs with seed spread |
+| **✏️ Design Editing** | Simplified inpaint/img2img editing with strength control and dual-speed support |
+| **🔄 Variations** | Generate 2-4 similar designs with seed spread and dual-speed support |
 | **📦 Logo Mockup Engine** | Place transparent logos on photorealistic products (T-Shirt, Mug, Bento layout, Ambient) |
 | **🧹 VRAM Management** | One-click GPU cache clear and automated cleanup for seamless Colab T4 operation |
 
@@ -108,6 +109,42 @@ The UI intelligently configures style defaults based on the chosen category:
 
 ---
 
+## 📥 Metadata Embedding & Drop-to-Load Restoration
+
+Fooocus Designer 2.0 embeds full generation parameters directly into generated PNG files:
+- **Dual Chunk Encoding**:
+  - `fooocus_designer_metadata`: Structured JSON chunk storing exact generation parameters (category, prompt, negative prompt, seed, speed mode, active styles, color palette hex codes, aspect ratio, width, height, and LoRA configs).
+  - `parameters`: Standard A1111/WebUI-compatible text chunk formatted for broad compatibility with external inspection tools.
+- **Drag-and-Drop Inspector (`📥 Load Settings from Image`)**:
+  - Drop any generated image directly into the inspector in the main Generate tab.
+  - Instantly populates the prompt, negative prompt, category, styles, seed, speed mode, and 5 color swatches back into the UI for seamless iteration and reproducibility.
+
+---
+
+## 🎨 Curated Commercial Color Palette Presets
+
+Jump-start commercial design projects with curated 5-color palettes engineered for print, vector, and branding:
+- **Custom / None**: Freeform color picking or disabled palette control.
+- **Pastel Dreams**: Soft muted aesthetic (`#FFB3BA`, `#FFDFBA`, `#FFFFBA`, `#BAFFC9`, `#BAE1FF`).
+- **Cyberpunk Neon**: High-contrast futuristic cyber palette (`#00F0FF`, `#FF003C`, `#FFE600`, `#7000FF`, `#0D0221`).
+- **Earthy Boho**: Organic, warm lifestyle palette (`#B5838D`, `#E5989B`, `#FFB4A2`, `#6D6875`, `#4A4E69`).
+- **Corporate Tech**: Professional enterprise branding (`#0052CC`, `#172B4D`, `#00B8D9`, `#36B37E`, `#FFFFFF`).
+- **Retro Sunset**: 70s/80s vintage warm gradients (`#F72585`, `#7209B7`, `#3A0CA3`, `#4361EE`, `#4CC9F0`).
+- **Luxury Gold**: Premium packaging and editorial branding (`#D4AF37`, `#AA771C`, `#85581A`, `#1A1A1A`, `#F4E8C1`).
+- **Nordic Minimalist**: Clean Scandinavian interior and graphic design (`#2E3440`, `#4C566A`, `#D8DEE9`, `#ECEFF4`, `#88C0D0`).
+
+---
+
+## ⚡ Harmonized Dual-Speed Engine (All Tabs)
+
+The ⚡ Fast vs 🎯 Master speed selector is unified across the entire application:
+- **Generate Tab**: ⚡ Fast (~3s) for rapid concept prototyping vs 🎯 Master (~15s) for production quality.
+- **Logo Mockup Tab**: Fast staging preview vs Master photorealistic render.
+- **Design Editing (Inpaint / Img2img)**: Fast draft inpainting vs Master polished touch-ups.
+- **Design Variations Tab**: Fast multi-seed exploration vs Master high-resolution deliverables.
+
+---
+
 ## ⚙️ Architecture
 
 ```
@@ -119,10 +156,11 @@ Fooocus-Design-Tool/
 │   ├── config.py                 # App configuration & aspect ratios
 │   ├── sdxl_pipeline.py          # Primary SDXL Diffusers Engine (Juggernaut XL)
 │   ├── lora_router.py            # LoRA loading, switching & weight management
+│   ├── metadata_manager.py       # PNG metadata embedding & drop-to-load parameter recovery
 │   ├── style_engine.py           # Multi-style prompt interpolation & negative stacking
 │   ├── design_categories.py      # Category & LoRA metadata loader
 │   ├── auto_prompt_enhancer.py   # Category prompt enhancement & negative builder
-│   ├── palette_control.py        # Color palette prompt injection & post-processing
+│   ├── palette_control.py        # Color palette prompt injection, presets & post-processing
 │   ├── starvector_pipeline.py    # StarVector-1B (lossless SVG conversion)
 │   ├── background_remover.py     # rembg background removal wrapper
 │   ├── variation.py              # Multi-seed variation generator
