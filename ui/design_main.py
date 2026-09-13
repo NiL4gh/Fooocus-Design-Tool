@@ -9,20 +9,24 @@ import random
 
 from modules.design_categories import get_category_names, get_category, get_default_transparent, get_default_aspect_ratio
 from modules.auto_prompt_enhancer import enhance_prompt, build_negative_prompt
-from modules.palette_control import inject_palette_prompt, apply_palette_post
+from modules.palette_control import inject_palette_prompt, apply_palette_post, get_palette_presets, get_preset_colors
+from modules.metadata_manager import build_metadata, save_image_with_metadata, extract_metadata
 from modules.sdxl_pipeline import generate as sdxl_generate
 from modules.style_engine import get_available_styles
 from modules import config
 
 
-def _save_image(image, output_dir, fmt='png'):
-    """Save a PIL image and return the file path."""
+def _save_image(image, output_dir, fmt='png', metadata=None):
+    """Save a PIL image with optional embedded metadata and return the file path."""
     os.makedirs(output_dir, exist_ok=True)
     timestamp = int(time.time() * 1000)
     rand = random.randint(1000, 9999)
     filename = f"design_{timestamp}_{rand}.{fmt}"
     filepath = os.path.join(output_dir, filename)
-    image.save(filepath, quality=95 if fmt == 'jpeg' else None)
+    if metadata is not None:
+        save_image_with_metadata(image, filepath, metadata, fmt=fmt)
+    else:
+        image.save(filepath, quality=95 if fmt == 'jpeg' else None)
     return filepath
 
 
@@ -89,8 +93,22 @@ def _generate(category, prompt, negative_prompt, color1, color2, color3, color4,
             with open(svg_path, 'w') as f:
                 f.write(svg_code)
 
+            # Construct metadata for raster preview
+            metadata = build_metadata(
+                category=category,
+                prompt=prompt,
+                negative_prompt=negative_prompt,
+                seed=used_seed,
+                speed_mode=speed_mode,
+                selected_styles=selected_styles,
+                colors=colors,
+                width=width,
+                height=height,
+                loras=cat_cfg.get("loras") if cat_cfg else None,
+            )
+
             # Also save raster preview
-            raster_path = _save_image(image, config.OUTPUT_DIR)
+            raster_path = _save_image(image, config.OUTPUT_DIR, metadata=metadata)
 
             yield f"✅ Done! Seed: {used_seed} | SVG saved: {os.path.basename(svg_path)}", image, [raster_path]
 
@@ -120,12 +138,88 @@ def _generate(category, prompt, negative_prompt, color1, color2, color3, color4,
                 from modules.background_remover import remove_background
                 image = remove_background(image)
 
+            # Construct metadata
+            metadata = build_metadata(
+                category=category,
+                prompt=prompt,
+                negative_prompt=negative_prompt,
+                seed=used_seed,
+                speed_mode=speed_mode,
+                selected_styles=selected_styles,
+                colors=colors,
+                width=width,
+                height=height,
+                loras=cat_cfg.get("loras") if cat_cfg else None,
+            )
+
             # Save
-            filepath = _save_image(image, config.OUTPUT_DIR)
+            filepath = _save_image(image, config.OUTPUT_DIR, metadata=metadata)
             yield f"✅ Done! Seed: {used_seed}", image, [filepath]
 
         except Exception as e:
             yield f"❌ Generation failed: {str(e)}", None, []
+
+
+def _on_palette_preset_change(preset_name):
+    """Update 5 color pickers when a curated palette preset is selected."""
+    colors = get_preset_colors(preset_name)
+    return (
+        gr.update(value=colors[0]),
+        gr.update(value=colors[1]),
+        gr.update(value=colors[2]),
+        gr.update(value=colors[3]),
+        gr.update(value=colors[4]),
+    )
+
+
+def _on_image_drop_inspect(image_file):
+    """Extract metadata from dropped image and return updates for UI components."""
+    if not image_file:
+        return (
+            gr.update(), gr.update(), gr.update(), gr.update(),
+            gr.update(), gr.update(), gr.update(), gr.update(),
+            gr.update(), gr.update(), gr.update(), gr.update()
+        )
+    
+    filepath = image_file if isinstance(image_file, str) else getattr(image_file, "name", None)
+    meta = extract_metadata(filepath) if filepath else extract_metadata(image_file)
+
+    if not meta:
+        return (
+            "⚠️ No Fooocus Designer metadata found in this image.",
+            gr.update(), gr.update(), gr.update(), gr.update(),
+            gr.update(), gr.update(), gr.update(), gr.update(),
+            gr.update(), gr.update(), gr.update()
+        )
+
+    cat = meta.get("category", "")
+    pr = meta.get("prompt", "")
+    neg = meta.get("negative_prompt", "")
+    spd = "⚡ Fast (~3s)" if meta.get("speed_mode") == "fast" else "🎯 Master (~15s)"
+    styles = meta.get("selected_styles", [])
+    seed = str(meta.get("seed", -1))
+    colors = meta.get("colors", [])
+    c1 = colors[0] if len(colors) > 0 else "#000000"
+    c2 = colors[1] if len(colors) > 1 else "#000000"
+    c3 = colors[2] if len(colors) > 2 else "#000000"
+    c4 = colors[3] if len(colors) > 3 else "#000000"
+    c5 = colors[4] if len(colors) > 4 else "#000000"
+
+    status_msg = f"📥 Loaded settings from image! (Category: {cat or 'Custom'}, Seed: {seed})"
+    return (
+        status_msg,
+        gr.update(value=cat) if cat else gr.update(),
+        gr.update(value=pr),
+        gr.update(value=neg),
+        gr.update(value=spd),
+        gr.update(value=styles),
+        gr.update(value=seed),
+        gr.update(value=c1),
+        gr.update(value=c2),
+        gr.update(value=c3),
+        gr.update(value=c4),
+        gr.update(value=c5),
+    )
 
 
 def _on_category_change(category):
@@ -196,6 +290,13 @@ def build_tab():
                 )
             
             with gr.Accordion('🎨 Color Palette', open=False):
+                palette_preset = gr.Dropdown(
+                    label="🎨 Curated Palette Preset",
+                    choices=get_palette_presets(),
+                    value="Custom / None",
+                    interactive=True,
+                    elem_id="palette_preset_dropdown"
+                )
                 with gr.Row():
                     color1 = gr.ColorPicker(label='Color 1', value='#000000')
                     color2 = gr.ColorPicker(label='Color 2', value='#000000')
@@ -219,6 +320,15 @@ def build_tab():
             )
             seed_val = gr.Textbox(label='🎲 Seed (-1 = random)', value='-1', max_lines=1)
  
+            with gr.Accordion('📥 Load Settings from Image', open=False):
+                inspect_image = gr.Image(
+                    label='Drop a Fooocus Designer PNG to restore prompt & settings',
+                    type='filepath',
+                    sources=['upload'],
+                    height=160,
+                    elem_id='inspect_image_input'
+                )
+
             generate_btn = gr.Button('🚀 Generate', variant='primary', elem_id='generate_btn')
  
         # RIGHT PANEL - Output
@@ -235,6 +345,21 @@ def build_tab():
         outputs=[remove_bg, aspect_ratio, status, styles_selector],
     )
  
+    palette_preset.change(
+        _on_palette_preset_change,
+        inputs=[palette_preset],
+        outputs=[color1, color2, color3, color4, color5],
+    )
+
+    inspect_image.change(
+        _on_image_drop_inspect,
+        inputs=[inspect_image],
+        outputs=[
+            status, category, prompt, negative_prompt, speed_choice,
+            styles_selector, seed_val, color1, color2, color3, color4, color5
+        ],
+    )
+
     generate_btn.click(
         _generate,
         inputs=[
