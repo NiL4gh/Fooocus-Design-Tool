@@ -68,7 +68,8 @@ def save_image_with_metadata(
         )
         image.save(filepath, format="PNG", pnginfo=png_info)
     else:
-        image.save(filepath, format=fmt.upper(), quality=95)
+        save_img = image.convert("RGB") if (fmt.upper() in ("JPEG", "JPG") and image.mode in ("RGBA", "P", "LA")) else image
+        save_img.save(filepath, format=fmt.upper(), quality=95)
 
     return filepath
 
