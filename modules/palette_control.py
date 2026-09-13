@@ -19,6 +19,28 @@ COLOR_NAMES = {
     '#FF6347': 'tomato red', '#4B0082': 'indigo',
 }
 
+# Curated commercial design color palette presets
+PALETTE_PRESETS = {
+    "Custom / None": ["#000000", "#000000", "#000000", "#000000", "#000000"],
+    "Pastel Dreams": ["#FFB3BA", "#BAFFC9", "#BAE1FF", "#FFFFBA", "#E8BAFF"],
+    "Cyberpunk Neon": ["#00F0FF", "#FF003C", "#FCEE09", "#05D9E8", "#D1F7FF"],
+    "Earthy Boho": ["#C29B7F", "#8C6239", "#556B2F", "#D4AF37", "#EEDC82"],
+    "Corporate Tech": ["#0052CC", "#00B8D9", "#36B37E", "#172B4D", "#F4F5F7"],
+    "Retro Sunset": ["#FD5E53", "#FC9C54", "#FFE373", "#432C7A", "#FF7A5A"],
+    "Luxury Gold": ["#D4AF37", "#FFD700", "#1A1A1A", "#2C2C2C", "#F5F5DC"],
+    "Nordic Minimalist": ["#E5E5E5", "#333333", "#4A6572", "#F9AA33", "#344955"],
+}
+
+
+def get_palette_presets() -> list:
+    """Return list of available curated palette preset names."""
+    return list(PALETTE_PRESETS.keys())
+
+
+def get_preset_colors(preset_name: str) -> list:
+    """Return the 5 hex color strings for a preset, falling back to 'Custom / None' if unknown."""
+    return list(PALETTE_PRESETS.get(preset_name, PALETTE_PRESETS["Custom / None"]))
+
 
 def hex_to_color_name(hex_color):
     """Convert hex color to nearest common name, or return hex description."""
