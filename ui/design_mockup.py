@@ -7,6 +7,7 @@ import time
 import random
 from modules.logo_mockup import get_product_types, get_mockup_styles, generate_mockup
 from modules import config
+from modules.metadata_manager import build_metadata, save_image_with_metadata
 
 
 def _gen_mockup(logo_image, product_type, scene_prompt, mockup_style, model_choice):
@@ -18,18 +19,22 @@ def _gen_mockup(logo_image, product_type, scene_prompt, mockup_style, model_choi
     yield "🔄 Initializing mockup pipeline...", None
 
     def cb(msg):
-        print(f"[Mockup] {msg}")
+        try:
+            print(f"[Mockup] {msg}")
+        except Exception:
+            pass
 
     yield f"🎨 Generating empty {product_type} ({mockup_style}) background scene with {model_choice}...", None
 
     try:
+        speed_mode = "fast" if "fast" in str(model_choice).lower() else "master"
         mockup_img, status_msg = generate_mockup(
             logo_image, 
             product_type, 
             scene_prompt, 
             mockup_style,
             progress_cb=cb,
-            model_name=model_choice
+            speed_mode=speed_mode,
         )
         
         if mockup_img is None:
@@ -42,8 +47,15 @@ def _gen_mockup(logo_image, product_type, scene_prompt, mockup_style, model_choi
         os.makedirs(config.OUTPUT_DIR, exist_ok=True)
         timestamp = int(time.time() * 1000)
         rand = random.randint(1000, 9999)
+        meta = build_metadata(
+            category=f"Mockup: {product_type}",
+            prompt=f"{product_type} mockup: {scene_prompt}".strip(),
+            negative_prompt="",
+            seed=-1,
+            speed_mode=speed_mode,
+        )
         filepath = os.path.join(config.OUTPUT_DIR, f"mockup_{timestamp}_{rand}.png")
-        mockup_img.save(filepath)
+        save_image_with_metadata(mockup_img, filepath, meta)
 
         yield f"{status_msg} | Saved: {os.path.basename(filepath)}", mockup_img
 
@@ -59,9 +71,9 @@ def build_tab():
             gr.Markdown("Upload any logo graphic and dynamically place it on a photorealistic product mockup scene.")
             mockup_logo = gr.Image(label='📷 Upload Logo', type='pil', sources=['upload'], height=300)
             mockup_model_choice = gr.Dropdown(
-                label="🤖 AI Model",
-                choices=["FLUX.1-schnell", "Z-Image-Turbo"],
-                value="FLUX.1-schnell",
+                label="⚡ Engine Mode",
+                choices=["⚡ Fast (~3s)", "🎯 Master (~15s)"],
+                value="⚡ Fast (~3s)",
                 interactive=True,
                 elem_id="mockup_model_dropdown"
             )

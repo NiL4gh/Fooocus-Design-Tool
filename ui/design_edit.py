@@ -5,6 +5,7 @@ import gradio as gr
 import os, time, random
 from modules import config
 from modules.sdxl_pipeline import generate as sdxl_generate, load_pipeline
+from modules.metadata_manager import build_metadata, save_image_with_metadata
 
 
 def _edit_generate(edit_image, edit_prompt, edit_negative, edit_strength):
@@ -60,9 +61,15 @@ def _edit_generate(edit_image, edit_prompt, edit_negative, edit_strength):
 
             image = result.images[0]
 
-        os.makedirs(config.OUTPUT_DIR, exist_ok=True)
+        meta = build_metadata(
+            category="Edit Design/Photo",
+            prompt=edit_prompt or "same image, improved",
+            negative_prompt=edit_negative or "",
+            seed=seed,
+            speed_mode="fast",
+        )
         filepath = os.path.join(config.OUTPUT_DIR, f"edit_{int(time.time()*1000)}.png")
-        image.save(filepath)
+        save_image_with_metadata(image, filepath, meta)
 
         yield f"✅ Edit complete! Seed: {seed}", image, [filepath]
 

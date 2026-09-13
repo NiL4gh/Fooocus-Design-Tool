@@ -4,6 +4,7 @@ Design Variations Tab — Generate 2-4 similar outputs from a prompt.
 import gradio as gr
 import os, time
 from modules import config
+from modules.metadata_manager import build_metadata, save_image_with_metadata
 
 
 def _gen_variations(prompt, negative, var_count, var_strength, seed_val, model_choice):
@@ -32,8 +33,15 @@ def _gen_variations(prompt, negative, var_count, var_strength, seed_val, model_c
         paths = []
         os.makedirs(config.OUTPUT_DIR, exist_ok=True)
         for img, s in results:
+            meta = build_metadata(
+                category="Variation",
+                prompt=prompt,
+                negative_prompt=negative,
+                seed=s,
+                speed_mode=speed,
+            )
             fp = os.path.join(config.OUTPUT_DIR, f"var_{int(time.time()*1000)}_{s}.png")
-            img.save(fp)
+            save_image_with_metadata(img, fp, meta)
             paths.append(fp)
 
         seeds = [str(s) for _, s in results]
@@ -49,9 +57,9 @@ def build_tab():
         with gr.Column(scale=2):
             var_prompt = gr.Textbox(label='✨ Prompt', placeholder='Enter the base prompt...', lines=3)
             var_model_choice = gr.Dropdown(
-                label="⚡ Speed Mode",
-                choices=["⚡ Fast (SDXL Lightning)", "🎯 Master (Juggernaut XL)"],
-                value="⚡ Fast (SDXL Lightning)",
+                label="⚡ Engine Mode",
+                choices=["⚡ Fast (~3s)", "🎯 Master (~15s)"],
+                value="⚡ Fast (~3s)",
                 interactive=True,
                 elem_id="var_model_dropdown"
             )
