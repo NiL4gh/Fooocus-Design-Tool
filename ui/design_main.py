@@ -47,8 +47,8 @@ def _save_image(image, output_dir, fmt='png', metadata=None):
 
 def _generate(category, prompt, negative_prompt, color1, color2, color3, color4, color5,
               use_master_neg, use_enhancement, remove_bg, vector_mode, aspect_ratio, seed_val, speed_mode_label,
-              selected_styles=None, base_model=None, concept_grid=False):
-    """Core generation function wired to the Generate button."""
+              selected_styles=None, base_model=None, batch_size=1, concept_grid=False, **kwargs):
+    """Core generation function wired to the Generate button with safe batch processing."""
 
     if not (prompt or "").strip() and not category:
         yield "⚠️ Please enter a prompt.", None, []
@@ -74,103 +74,99 @@ def _generate(category, prompt, negative_prompt, color1, color2, color3, color4,
     # Parse seed
     seed = int(seed_val) if seed_val and str(seed_val).strip() and str(seed_val).strip() != '-1' else -1
 
-    yield "🔄 Loading pipeline...", None, []
+    batch_count = max(1, min(32, int(batch_size or 1)))
+    all_output_paths = []
+    latest_img = None
+    model_label = base_model.split("(")[0].strip() if base_model else "Juggernaut XL v9"
+
+    yield f"🔄 Initializing {model_label}...", None, []
 
     if vector_mode:
-        # SVG generation path
-        yield "🔄 Loading StarVector (first use may download model)...", None, []
-        try:
-            from modules.starvector_pipeline import image_to_svg, load_model
+        from modules.starvector_pipeline import image_to_svg
+        for i in range(batch_count):
+            cur_seed = -1 if seed == -1 else (seed + i)
+            step_txt = f" ({i+1}/{batch_count})" if batch_count > 1 else ""
+            yield f"🎨 Generating vector design{step_txt} with {model_label}...", latest_img, all_output_paths
+            try:
+                image, used_seed = sdxl_generate(
+                    prompt=final_prompt,
+                    negative_prompt=final_negative,
+                    width=width,
+                    height=height,
+                    seed=cur_seed,
+                    speed_mode=speed_mode,
+                    category_cfg=cat_cfg,
+                    base_model=base_model,
+                )
+                yield f"✏️ Tracing SVG vector paths{step_txt}...", image, all_output_paths
+                svg_code = image_to_svg(image)
+                os.makedirs(config.OUTPUT_DIR, exist_ok=True)
+                timestamp = int(time.time() * 1000)
+                svg_path = os.path.join(config.OUTPUT_DIR, f"design_{timestamp}_{i}.svg")
+                with open(svg_path, 'w', encoding='utf-8') as f:
+                    f.write(svg_code)
 
-            model_label = base_model.split("(")[0].strip() if base_model else "Juggernaut XL v9"
-            yield f"🎨 Generating raster base image using {model_label}...", None, []
-            image, used_seed = sdxl_generate(
-                prompt=final_prompt,
-                negative_prompt=final_negative,
-                width=width,
-                height=height,
-                seed=seed,
-                speed_mode=speed_mode,
-                category_cfg=cat_cfg,
-                base_model=base_model,
-            )
-
-            yield "✏️ Vectorizing to SVG...", None, []
-            svg_code = image_to_svg(image)
-
-            # Save SVG
-            os.makedirs(config.OUTPUT_DIR, exist_ok=True)
-            svg_path = os.path.join(config.OUTPUT_DIR, f"design_{int(time.time()*1000)}.svg")
-            with open(svg_path, 'w') as f:
-                f.write(svg_code)
-
-            # Construct metadata for raster preview
-            metadata = build_metadata(
-                category=category,
-                prompt=prompt,
-                negative_prompt=negative_prompt,
-                seed=used_seed,
-                speed_mode=speed_mode,
-                selected_styles=selected_styles,
-                colors=colors,
-                width=width,
-                height=height,
-                loras=cat_cfg.get("loras") if cat_cfg else None,
-            )
-
-            # Also save raster preview
-            raster_path = _save_image(image, config.OUTPUT_DIR, metadata=metadata)
-
-            yield f"✅ Done! Seed: {used_seed} | SVG saved: {os.path.basename(svg_path)}", image, [raster_path]
-
-        except Exception as e:
-            yield f"❌ Vector generation failed: {str(e)}", None, []
+                metadata = build_metadata(
+                    category=category,
+                    prompt=prompt,
+                    negative_prompt=negative_prompt,
+                    seed=used_seed,
+                    speed_mode=speed_mode,
+                    selected_styles=selected_styles,
+                    colors=colors,
+                    width=width,
+                    height=height,
+                    loras=cat_cfg.get("loras") if cat_cfg else None,
+                )
+                raster_path = _save_image(image, config.OUTPUT_DIR, metadata=metadata)
+                all_output_paths.append(raster_path)
+                latest_img = image
+                yield f"✅ Done! {i+1} of {batch_count} vector design(s) (Seed: {used_seed})", latest_img, all_output_paths
+            except Exception as e:
+                yield f"❌ Vector generation failed on item {i+1}: {str(e)}", latest_img, all_output_paths
+                break
     else:
-        # Standard raster generation
-        try:
-            model_label = base_model.split("(")[0].strip() if base_model else "Juggernaut XL v9"
-            yield f"🎨 Generating with {model_label} ({speed_mode} mode)...", None, []
-            image, used_seed = sdxl_generate(
-                prompt=final_prompt,
-                negative_prompt=final_negative,
-                width=width,
-                height=height,
-                seed=seed,
-                speed_mode=speed_mode,
-                category_cfg=cat_cfg,
-                base_model=base_model,
-            )
+        for i in range(batch_count):
+            cur_seed = -1 if seed == -1 else (seed + i)
+            step_txt = f" ({i+1}/{batch_count})" if batch_count > 1 else ""
+            yield f"🎨 Generating design{step_txt} with {model_label} ({speed_mode} mode)...", latest_img, all_output_paths
+            try:
+                image, used_seed = sdxl_generate(
+                    prompt=final_prompt,
+                    negative_prompt=final_negative,
+                    width=width,
+                    height=height,
+                    seed=cur_seed,
+                    speed_mode=speed_mode,
+                    category_cfg=cat_cfg,
+                    base_model=base_model,
+                )
+                if colors:
+                    image = apply_palette_post(image, colors, strength=0.3)
+                if remove_bg:
+                    yield f"🧹 Removing background{step_txt}...", image, all_output_paths
+                    from modules.background_remover import remove_background
+                    image = remove_background(image)
 
-            # Apply palette post-processing
-            if colors:
-                image = apply_palette_post(image, colors, strength=0.3)
-
-            # Background removal
-            if remove_bg:
-                yield "🧹 Removing background...", None, []
-                from modules.background_remover import remove_background
-                image = remove_background(image)
-
-            # Construct metadata
-            metadata = build_metadata(
-                category=category,
-                prompt=prompt,
-                negative_prompt=negative_prompt,
-                seed=used_seed,
-                speed_mode=speed_mode,
-                selected_styles=selected_styles,
-                colors=colors,
-                width=width,
-                height=height,
-                loras=cat_cfg.get("loras") if cat_cfg else None,
-            )
-
-            # Save
-            filepath = _save_image(image, config.OUTPUT_DIR, metadata=metadata)
-            yield f"✅ Done! Seed: {used_seed}", image, [filepath]
-
-        except Exception as e:
-            yield f"❌ Generation failed: {str(e)}", None, []
+                metadata = build_metadata(
+                    category=category,
+                    prompt=prompt,
+                    negative_prompt=negative_prompt,
+                    seed=used_seed,
+                    speed_mode=speed_mode,
+                    selected_styles=selected_styles,
+                    colors=colors,
+                    width=width,
+                    height=height,
+                    loras=cat_cfg.get("loras") if cat_cfg else None,
+                )
+                filepath = _save_image(image, config.OUTPUT_DIR, metadata=metadata)
+                all_output_paths.append(filepath)
+                latest_img = image
+                yield f"✅ Done! {i+1} of {batch_count} design(s) (Seed: {used_seed})", latest_img, all_output_paths
+            except Exception as e:
+                yield f"❌ Generation failed on item {i+1}: {str(e)}", latest_img, all_output_paths
+                break
 
 
 def _on_palette_preset_change(preset_name):
@@ -348,6 +344,15 @@ def build_tab():
                 interactive=True
             )
             seed_val = gr.Textbox(label='🎲 Seed (-1 = random)', value='-1', max_lines=1)
+            batch_size = gr.Slider(
+                label='🔢 Batch Size (Number of Images)',
+                minimum=1,
+                maximum=32,
+                step=1,
+                value=1,
+                interactive=True,
+                elem_id='batch_size_slider'
+            )
  
             with gr.Accordion('📥 Load Settings from Image', open=False):
                 inspect_image = gr.Image(
@@ -367,8 +372,15 @@ def build_tab():
                 elem_id="engine_status_header"
             )
             status = gr.Textbox(label='Status', interactive=False, elem_id='status_display')
-            preview = gr.Image(label='Preview', type='pil', interactive=False, height=512)
-            gallery = gr.Gallery(label='Generated Images', columns=4, height=300,
+            preview = gr.Image(label='Active Design Canvas', type='pil', interactive=False, height=480, elem_id='main_canvas_preview')
+            
+            with gr.Row():
+                quick_rembg_btn = gr.Button("🧹 Remove Background", size="sm", variant="secondary", elem_id="quick_rembg_btn")
+                quick_vector_btn = gr.Button("✏️ Vectorize SVG", size="sm", variant="secondary", elem_id="quick_vector_btn")
+            
+            svg_download_file = gr.File(label="SVG Vector Asset Download", visible=False, elem_id="svg_download_file")
+            
+            gallery = gr.Gallery(label='Generated Asset History', columns=4, height=220,
                                  object_fit='contain', elem_id='output_gallery')
  
     # Wire events
@@ -393,13 +405,50 @@ def build_tab():
         ],
     )
 
+    def _quick_remove_bg(preview_img):
+        if preview_img is None:
+            return "⚠️ No active image to remove background from.", None
+        try:
+            from modules.background_remover import remove_background
+            transparent_img = remove_background(preview_img)
+            _save_image(transparent_img, config.OUTPUT_DIR)
+            return "✅ Background removed cleanly!", transparent_img
+        except Exception as e:
+            return f"❌ Background removal error: {e}", preview_img
+
+    def _quick_vectorize(preview_img):
+        if preview_img is None:
+            return "⚠️ No active image to vectorize.", gr.update(visible=False)
+        try:
+            from modules.starvector_pipeline import image_to_svg
+            svg_str = image_to_svg(preview_img)
+            os.makedirs(config.OUTPUT_DIR, exist_ok=True)
+            svg_path = os.path.join(config.OUTPUT_DIR, f"vector_{int(time.time()*1000)}.svg")
+            with open(svg_path, 'w', encoding='utf-8') as f:
+                f.write(svg_str)
+            return f"✅ Vectorized to SVG! ({os.path.basename(svg_path)})", gr.update(value=svg_path, visible=True)
+        except Exception as e:
+            return f"❌ Vectorization error: {e}", gr.update(visible=False)
+
+    quick_rembg_btn.click(
+        _quick_remove_bg,
+        inputs=[preview],
+        outputs=[status, preview]
+    )
+
+    quick_vector_btn.click(
+        _quick_vectorize,
+        inputs=[preview],
+        outputs=[status, svg_download_file]
+    )
+
     generate_btn.click(
         _generate,
         inputs=[
             category, prompt, negative_prompt,
             color1, color2, color3, color4, color5,
             use_master_neg, use_enhancement, remove_bg, vector_mode,
-            aspect_ratio, seed_val, speed_choice, styles_selector, base_model_dropdown
+            aspect_ratio, seed_val, speed_choice, styles_selector, base_model_dropdown, batch_size
         ],
         outputs=[status, preview, gallery]
     )

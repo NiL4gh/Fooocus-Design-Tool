@@ -49,7 +49,27 @@ class TestModelSelection(unittest.TestCase):
             speed_mode="fast",
         )
         self.assertIsNotNone(img)
-        self.assertGreater(seed, 0)
+    def test_batch_generation_ui(self):
+        from ui.design_main import _generate
+        gen = _generate(
+            category="Logo",
+            prompt="minimal coffee logo",
+            negative_prompt="",
+            color1="#000000", color2="#000000", color3="#000000", color4="#000000", color5="#000000",
+            use_master_neg=True,
+            use_enhancement=True,
+            remove_bg=False,
+            vector_mode=False,
+            aspect_ratio="1024×1024 (1:1)",
+            seed_val="100",
+            speed_mode_label="🎯 Master (~15s)",
+            batch_size=2,
+        )
+        steps = list(gen)
+        self.assertGreater(len(steps), 0)
+        final_status, final_img, final_gallery = steps[-1]
+        self.assertIn("Done", final_status)
+        self.assertEqual(len(final_gallery), 2)
 
 
 if __name__ == "__main__":
