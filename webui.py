@@ -1,15 +1,15 @@
 """
 Fooocus Design Tool — Web UI
-A specialized graphic design asset generator built on SDXL Juggernaut-XL.
+A specialized graphic design asset generator built on SDXL.
 """
 import gradio as gr
 from ui.theme import THEME_CSS
-from ui import design_main, design_edit, design_variations, design_mockup
+from ui import design_main, design_edit, design_mockup
 from modules.flags import APP_NAME, VERSION
 
 
 def clean_vram():
-    """Clean GPU VRAM memory by unloading active models and collecting garbage."""
+    """Clean GPU VRAM memory by unloading active models and collecting garbage (utility)."""
     import gc
     import torch
     from modules.sdxl_pipeline import unload_pipeline, is_loaded as is_sdxl
@@ -48,12 +48,24 @@ def create_app():
             primary_hue="violet",
             secondary_hue="blue",
             neutral_hue="slate",
-            font=gr.themes.GoogleFont("Inter"),
+            font=gr.themes.GoogleFont("Plus Jakarta Sans"),
         ),
     ) as app:
-        # Header
-        gr.HTML(f'<div class="app-header">🎨 {APP_NAME}</div>')
-        gr.HTML(f'<div class="app-subtitle">AI-Powered Design Asset Generator • v{VERSION}</div>')
+        # Header Webapp Bar
+        gr.HTML(f'''
+        <div class="app-header-container">
+            <div class="app-brand">
+                <span style="font-size: 1.6rem;">🎨</span>
+                <div>
+                    <span class="app-brand-title">{APP_NAME}</span>
+                    <span class="app-badge">v{VERSION} PRO WORKSTATION</span>
+                </div>
+            </div>
+            <div style="font-size: 0.82rem; color: var(--text-medium); font-weight: 500;">
+                Zero-Friction Graphic Design Asset Studio • Powered by SDXL
+            </div>
+        </div>
+        ''')
 
         # Main tabs
         with gr.Tabs():
@@ -63,22 +75,12 @@ def create_app():
             with gr.Tab("✏️ Edit", id="edit_tab"):
                 design_edit.build_tab()
 
-            with gr.Tab("🔄 Variations", id="variations_tab"):
-                design_variations.build_tab()
-
             with gr.Tab("📦 Mockup", id="mockup_tab"):
                 design_mockup.build_tab()
 
-        # Footer / Utilities
-        with gr.Row(elem_id="app_footer"):
-            with gr.Column(scale=4):
-                gr.HTML(f'<div style="text-align: center; color: var(--text-muted); font-size: 0.85em; margin-top: 20px;">'
-                        f'🎨 {APP_NAME} v{VERSION} • Optimized for Graphic Design Asset Production</div>')
-            with gr.Column(scale=1):
-                vram_btn = gr.Button("🧹 Clean GPU VRAM", variant="secondary", elem_id="vram_clean_btn")
-                vram_status = gr.HTML(value="", elem_id="vram_status")
-
-        vram_btn.click(clean_vram, inputs=[], outputs=[vram_status])
+        # Footer
+        gr.HTML(f'<div style="text-align: center; color: var(--text-low); font-size: 0.8rem; margin-top: 24px; padding-bottom: 12px;">'
+                f'🎨 {APP_NAME} v{VERSION} • Commercial Stock & Graphic Asset Production Studio</div>')
 
     return app
 
