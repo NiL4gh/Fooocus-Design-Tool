@@ -26,9 +26,11 @@ LIGHTNING_LORA_WEIGHT = "sdxl_lightning_4step_lora.safetensors"
 
 SUPPORTED_BASE_MODELS = {
     "Juggernaut XL v9 (Commercial Graphic Design & Assets)": "RunDiffusion/Juggernaut-XL-v9",
-    "SDXL Base 1.0 (Official Stability AI)": "stabilityai/stable-diffusion-xl-base-1.0",
-    "Animagine XL 3.1 (Anime & Stylized Art)": "cagliostrolab/animagine-xl-3.1",
     "RealVisXL v4.0 (Photorealistic & Mockups)": "SG161222/RealVisXL_V4.0",
+    "Animagine XL 3.1 (Anime & Stylized Art)": "cagliostrolab/animagine-xl-3.1",
+    "DreamShaper XL Turbo (Creative & Rapid Art)": "Lykon/dreamshaper-xl-v2-turbo",
+    "SDXL Base 1.0 (Official Stability AI)": "stabilityai/stable-diffusion-xl-base-1.0",
+    "SDXL Turbo 1.0 (Realtime 1-Step Creative)": "stabilityai/sdxl-turbo",
 }
 
 
