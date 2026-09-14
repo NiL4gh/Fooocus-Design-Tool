@@ -2,8 +2,8 @@
   "categories": [
     {
       "name": "Adobe Stock Silhouette",
-      "master_negative": "color, grayscale, shading, shadows, realistic, photograph, 3d render, blurry, noisy, text, watermark, background textures, complex details, gradient background",
-      "prompt_enhancement": "isolated solid black silhouette, flat design, clean vector style, sharp edges, high contrast, minimalist, clean SVG path vector, clip art, graphic asset, professional commercial asset",
+      "master_negative": "realistic, photo, photography, 3d, shading, gradient, color, lighting, shadow, texture photo, fabric realism, skin detail, blur, noise, grain, watercolor, paint, ink bleed, background scene, complex illustration, depth, perspective distortion, soft edges, glow, reflections",
+      "prompt_enhancement": "solid black silhouette, profile silhouette, flat vector, black and white, solid shapes, clean lines, isolated on white background, minimal, stock-ready",
       "default_transparent": true,
       "default_aspect_ratio": "1024*1024",
       "icon": "👤",
@@ -16,8 +16,8 @@
     },
     {
       "name": "Adobe Stock Flat Vector",
-      "master_negative": "photograph, realistic photo, 3d render, gradients, shading, blurry, noisy, shadows, texture, text, watermark, human face, complex detailed background",
-      "prompt_enhancement": "flat minimalist vector graphic, clean vector style, solid colors, smooth clean outlines, isolated, commercial graphic asset, Adobe Stock style vector, scalable graphic element, 2d illustration",
+      "master_negative": "realistic, photo, photography, 3d, shading, gradient, lighting, shadow, texture photo, fabric realism, skin detail, blur, noise, grain, watercolor, paint, ink bleed, background scene, complex illustration, depth, perspective distortion, soft edges, glow, reflections",
+      "prompt_enhancement": "flat vector illustration, bold clean outlines, vibrant solid color blocks, smooth SVG paths, isolated on white background, minimal, stock-ready",
       "default_transparent": true,
       "default_aspect_ratio": "1024*1024",
       "icon": "💎",

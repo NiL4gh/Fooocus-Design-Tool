@@ -37,30 +37,30 @@ def get_default_system_prompt() -> str:
         pass
     return DEFAULT_SYSTEM_PROMPT
 
-# Commercial design expansion dictionary for instant heuristic enhancement
+# Commercial design expansion dictionary tuned directly from Fooocus Vector & Silhouette engineering standard
 CATEGORY_MODIFIERS = {
     "Adobe Stock Silhouette": {
-        "keywords": "solid pitch black silhouette, razor-sharp clean edges, minimalist vector profile, high contrast graphic symbol, perfectly isolated on white background, commercial clip art asset",
-        "negative": "color, gradient, grayscale, photographic shading, textures, background noise, 3d render, watermark",
+        "keywords": "profile silhouette, flat vector, black and white, solid shapes, clean lines, isolated on white background, minimal, stock-ready",
+        "negative": "realistic, photo, photography, 3d, shading, gradient, color, lighting, shadow, texture photo, fabric realism, skin detail, blur, noise, grain, watercolor, paint, ink bleed, background scene, complex illustration, depth, perspective distortion, soft edges, glow, reflections",
     },
     "Adobe Stock Flat Vector": {
-        "keywords": "flat 2d vector illustration, bold clean outlines, vibrant solid color blocks, smooth SVG paths, modern corporate Memphis aesthetic, professional Adobe Stock graphic asset",
-        "negative": "photorealistic photo, gradients, 3d depth, realistic textures, grainy, blurry, messy background, text",
+        "keywords": "flat vector illustration, bold clean outlines, vibrant solid color blocks, smooth SVG paths, isolated on white background, minimal, stock-ready",
+        "negative": "realistic, photo, photography, 3d, shading, gradient, lighting, shadow, texture photo, fabric realism, skin detail, blur, noise, grain, watercolor, paint, ink bleed, background scene, complex illustration, depth, perspective distortion, soft edges, glow, reflections",
     },
     "Adobe Stock Sticker/Clipart": {
-        "keywords": "die-cut vinyl sticker design, clean white contour border, cute vibrant clipart illustration, smooth clean edges, vector patch aesthetic, high contrast isolated white background",
-        "negative": "photograph, complex busy background, dark background, blurry edges, clipping artifacts, realism",
+        "keywords": "die-cut sticker design, clean white contour border, flat vector illustration, smooth clean edges, vector patch aesthetic, isolated on white background, minimal, stock-ready",
+        "negative": "photograph, realistic photo, complex busy background, dark background, blurry edges, clipping artifacts, realism, 3d render, shadows, texture",
     },
     "Adobe Stock Seamless Pattern": {
-        "keywords": "seamless tileable repeating pattern, continuous textile surface design, symmetrical geometric motif, clean flat vector elements, commercial fabric wallpaper backdrop",
-        "negative": "asymmetric, non-repeating, framed edges, borders, photograph, 3d shadows, perspective view",
+        "keywords": "seamless tileable repeating pattern, continuous surface design, symmetrical geometric motif, clean flat vector elements, commercial fabric wallpaper backdrop",
+        "negative": "asymmetric, non-repeating, framed edges, borders, photograph, 3d shadows, perspective view, blur",
     },
     "Logo": {
-        "keywords": "modern minimalist vector logo, clean iconic emblem, balanced golden ratio geometry, sleek typography spacing, professional corporate branding symbol, centered composition",
-        "negative": "complex realistic photograph, messy lines, human face, realistic animal, noisy details, gradient blur",
+        "keywords": "modern minimalist vector logo, front-facing, clean iconic emblem, balanced geometry, solid shapes, clean lines, isolated on white background, minimal, stock-ready",
+        "negative": "realistic, photo, 3d, shading, gradient, complex details, photographic textures, blurry, background noise, watermark",
     },
     "Poster": {
-        "keywords": "commercial advertising poster design, dynamic layout composition, striking visual hierarchy, professional graphic typography balance, clean editorial aesthetic, 8k resolution",
+        "keywords": "commercial advertising poster design, dynamic layout composition, striking visual hierarchy, professional graphic typography balance, clean editorial aesthetic",
         "negative": "amateur composition, blurry, low contrast, distorted text, cluttered layout",
     },
     "Artwork": {
@@ -72,16 +72,28 @@ CATEGORY_MODIFIERS = {
 
 def _heuristic_enhance(prompt: str, category: str = "") -> Tuple[str, str]:
     """
-    Zero-latency heuristic prompt expansion specifically tuned for graphic assets.
+    Zero-latency tag-based heuristic prompt expansion specifically tuned from
+    Fooocus Vector and Silhouette Prompt Engineer doctrine.
     """
     clean_p = (prompt or "").strip()
     if not clean_p:
-        return "minimalist geometric commercial design asset", "blurry, low resolution, watermark"
+        if category == "Adobe Stock Silhouette":
+            return (
+                "minimalist icon profile silhouette, flat vector, black and white, solid shapes, clean lines, isolated on white background, minimal, stock-ready",
+                CATEGORY_MODIFIERS["Adobe Stock Silhouette"]["negative"]
+            )
+        return "minimalist geometric commercial design asset, flat vector, isolated on white background", "blurry, low resolution, watermark, realistic photo"
 
     cat_info = CATEGORY_MODIFIERS.get(category, {
-        "keywords": "commercial graphic design asset, clean composition, professional studio lighting, high contrast, 8k sharp detail",
-        "negative": "blurry, low resolution, bad anatomy, noisy artifacts, watermark, text distortions",
+        "keywords": "commercial graphic design asset, clean composition, high contrast, sharp vector paths, stock-ready",
+        "negative": "blurry, low resolution, bad anatomy, noisy artifacts, watermark, photographic realism, shadow",
     })
+
+    # For silhouettes and flat vectors, remove counter-productive terms from user idea
+    if category in ["Adobe Stock Silhouette", "Adobe Stock Flat Vector", "Logo"]:
+        for forbidden in ["photorealistic", "photo", "lighting", "shadow", "gradient", "3d", "realistic", "render"]:
+            clean_p = re.sub(rf"\b{forbidden}\b", "", clean_p, flags=re.IGNORECASE).strip()
+        clean_p = re.sub(r"\s+", " ", clean_p).strip(" ,")
 
     # Avoid duplicating existing words
     p_lower = clean_p.lower()
