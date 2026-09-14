@@ -96,5 +96,26 @@ class TestMetadataManager(unittest.TestCase):
         self.assertIn("cute cat", display_str)
         self.assertIn("999", display_str)
 
+    def test_stealth_sanitization(self):
+        """Verify stealth sanitization completely strips AI signatures and injects clean commercial metadata."""
+        from modules.metadata_manager import save_sanitized_image
+        meta = build_metadata(category="Logo", prompt="secret ai prompt", seed=777)
+        filepath = os.path.join(self.temp_dir, "stealth_asset.png")
+        
+        # Save with stealth_mode=True
+        save_image_with_metadata(self.test_img, filepath, meta, stealth_mode=True)
+        
+        # Verify AI metadata extractor finds nothing
+        extracted = extract_metadata(filepath)
+        self.assertIsNone(extracted)
+        
+        # Inspect raw PNG chunks directly
+        with Image.open(filepath) as img:
+            self.assertNotIn("fooocus_designer_metadata", img.info)
+            self.assertNotIn("parameters", img.info)
+            self.assertIn("Software", img.info)
+            self.assertTrue(any(brand in img.info["Software"] for brand in ["Adobe", "Affinity", "Corel"]))
+
+
 if __name__ == "__main__":
     unittest.main()

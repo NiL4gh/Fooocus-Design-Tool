@@ -42,15 +42,61 @@ def build_metadata(
     }
 
 
+import random
+import datetime
+
+
+def save_sanitized_image(
+    image: Image.Image,
+    filepath: str,
+    fmt: str = "png",
+) -> str:
+    """
+    Save image with all AI generative footprints stripped and replaced with
+    plausible commercial digital design metadata (Adobe Photoshop / Illustrator).
+    Protects commercial and microstock assets from automated AI rejection algorithms.
+    """
+    os.makedirs(os.path.dirname(os.path.abspath(filepath)), exist_ok=True)
+    software_options = [
+        "Adobe Photoshop 2024 (Windows)",
+        "Adobe Illustrator 28.0 (Windows)",
+        "Affinity Designer 2.4",
+        "CorelDRAW Graphic Suite 2023",
+    ]
+    chosen_sw = random.choice(software_options)
+    
+    # Plausible recent creation date
+    now = datetime.datetime.now() - datetime.timedelta(minutes=random.randint(5, 720))
+    time_str = now.strftime("%Y:%m:%d %H:%M:%S")
+
+    if fmt.lower() == "png":
+        png_info = PngInfo()
+        png_info.add_text("Software", chosen_sw)
+        png_info.add_text("Creation Time", time_str)
+        png_info.add_text("Source", "Digital Graphic Workstation Asset")
+        png_info.add_text("Copyright", f"Commercial Stock Asset ({now.year})")
+        image.save(filepath, format="PNG", pnginfo=png_info, dpi=(300, 300))
+    else:
+        save_img = image.convert("RGB") if (fmt.upper() in ("JPEG", "JPG") and image.mode in ("RGBA", "P", "LA")) else image
+        save_img.save(filepath, format=fmt.upper(), quality=98, dpi=(300, 300))
+
+    return filepath
+
+
 def save_image_with_metadata(
     image: Image.Image,
     filepath: str,
     metadata: Dict[str, Any],
-    fmt: str = "png"
+    fmt: str = "png",
+    stealth_mode: bool = False,
 ) -> str:
     """
     Save a PIL Image with embedded PNG metadata.
+    If stealth_mode is enabled, strips AI tags and embeds plausible commercial software metadata.
     """
+    if stealth_mode:
+        return save_sanitized_image(image, filepath, fmt=fmt)
+
     os.makedirs(os.path.dirname(os.path.abspath(filepath)), exist_ok=True)
 
     if fmt.lower() == "png":

@@ -31,7 +31,7 @@ def _get_lora_status(category: str) -> str:
     return "🏷️ **Active Baked LoRA:** None (Direct SDXL base model with trigger conditioning)"
 
 
-def _save_image(image, output_dir, fmt='png', metadata=None):
+def _save_image(image, output_dir, fmt='png', metadata=None, stealth_mode=False):
     """Save a PIL image with optional embedded metadata and return the file path."""
     os.makedirs(output_dir, exist_ok=True)
     timestamp = int(time.time() * 1000)
@@ -39,15 +39,19 @@ def _save_image(image, output_dir, fmt='png', metadata=None):
     filename = f"design_{timestamp}_{rand}.{fmt}"
     filepath = os.path.join(output_dir, filename)
     if metadata is not None:
-        save_image_with_metadata(image, filepath, metadata, fmt=fmt)
+        save_image_with_metadata(image, filepath, metadata, fmt=fmt, stealth_mode=stealth_mode)
     else:
-        image.save(filepath, quality=95 if fmt == 'jpeg' else None)
+        if stealth_mode:
+            from modules.metadata_manager import save_sanitized_image
+            save_sanitized_image(image, filepath, fmt=fmt)
+        else:
+            image.save(filepath, quality=95 if fmt == 'jpeg' else None)
     return filepath
 
 
 def _generate(category, prompt, negative_prompt, color1, color2, color3, color4, color5,
               use_master_neg, use_enhancement, remove_bg, vector_mode, aspect_ratio, seed_val, speed_mode_label,
-              selected_styles=None, base_model=None, batch_size=1, concept_grid=False, **kwargs):
+              selected_styles=None, base_model=None, batch_size=1, stealth_mode=False, concept_grid=False, **kwargs):
     """Core generation function wired to the Generate button with safe batch processing."""
 
     if not (prompt or "").strip() and not category:
@@ -118,7 +122,7 @@ def _generate(category, prompt, negative_prompt, color1, color2, color3, color4,
                     height=height,
                     loras=cat_cfg.get("loras") if cat_cfg else None,
                 )
-                raster_path = _save_image(image, config.OUTPUT_DIR, metadata=metadata)
+                raster_path = _save_image(image, config.OUTPUT_DIR, metadata=metadata, stealth_mode=stealth_mode)
                 all_output_paths.append(raster_path)
                 latest_img = image
                 yield f"✅ Done! {i+1} of {batch_count} vector design(s) (Seed: {used_seed})", latest_img, all_output_paths
@@ -160,7 +164,7 @@ def _generate(category, prompt, negative_prompt, color1, color2, color3, color4,
                     height=height,
                     loras=cat_cfg.get("loras") if cat_cfg else None,
                 )
-                filepath = _save_image(image, config.OUTPUT_DIR, metadata=metadata)
+                filepath = _save_image(image, config.OUTPUT_DIR, metadata=metadata, stealth_mode=stealth_mode)
                 all_output_paths.append(filepath)
                 latest_img = image
                 yield f"✅ Done! {i+1} of {batch_count} design(s) (Seed: {used_seed})", latest_img, all_output_paths
@@ -285,6 +289,12 @@ def build_tab():
                 gr.Markdown(
                     "⚡ **Fast Mode**: ByteDance SDXL-Lightning 4-step LoRA (~3s generation, rapid concepting).\n\n"
                     "🎯 **Master Mode**: Full 28-step DPM++ 2M Karras scheduler (maximum detail & 100% LoRA fidelity)."
+                )
+                stealth_mode_checkbox = gr.Checkbox(
+                    label="🛡️ AI Metadata Cleanser (Sanitize AI tags for Microstock)",
+                    value=True,
+                    interactive=True,
+                    elem_id="stealth_metadata_checkbox",
                 )
             speed_choice = gr.Radio(
                 label="⚡ Engine Mode",
@@ -448,7 +458,8 @@ def build_tab():
             category, prompt, negative_prompt,
             color1, color2, color3, color4, color5,
             use_master_neg, use_enhancement, remove_bg, vector_mode,
-            aspect_ratio, seed_val, speed_choice, styles_selector, base_model_dropdown, batch_size
+            aspect_ratio, seed_val, speed_choice, styles_selector, base_model_dropdown, batch_size,
+            stealth_mode_checkbox
         ],
         outputs=[status, preview, gallery]
     )
