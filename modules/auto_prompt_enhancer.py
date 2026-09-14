@@ -42,7 +42,7 @@ def enhance_prompt(
     Returns:
         Enhanced prompt string.
     """
-    current_prompt = prompt.strip().rstrip(",").strip()
+    current_prompt = (prompt or "").strip().rstrip(",").strip()
 
     if use_enhancement and category_name:
         template = get_enhancement_template(category_name)
@@ -58,8 +58,8 @@ def enhance_prompt(
 
 
 def build_negative_prompt(
-    user_negative: str,
-    category_name: str,
+    user_negative: Optional[str] = None,
+    category_name: str = "",
     use_master_negative: bool = True,
     selected_styles: Optional[List[str]] = None,
 ) -> str:
@@ -76,7 +76,7 @@ def build_negative_prompt(
     Returns:
         Combined negative prompt string.
     """
-    user_neg_clean = user_negative.strip().rstrip(",").strip()
+    user_neg_clean = (user_negative or "").strip().rstrip(",").strip()
     negative_parts = [user_neg_clean] if user_neg_clean else []
 
     if use_master_negative and category_name:

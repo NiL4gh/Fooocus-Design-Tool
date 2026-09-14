@@ -9,7 +9,7 @@ from modules.metadata_manager import build_metadata, save_image_with_metadata
 
 def _gen_variations(prompt, negative, var_count, var_strength, seed_val, model_choice):
     """Generate variations using seed mixing."""
-    if not prompt.strip():
+    if not (prompt or "").strip():
         yield "⚠️ Please enter a prompt.", []
         return
 

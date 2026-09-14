@@ -35,7 +35,7 @@ def _generate(category, prompt, negative_prompt, color1, color2, color3, color4,
               selected_styles=None):
     """Core generation function wired to the Generate button."""
 
-    if not prompt.strip() and not category:
+    if not (prompt or "").strip() and not category:
         yield "⚠️ Please enter a prompt.", None, []
         return
 
@@ -49,7 +49,7 @@ def _generate(category, prompt, negative_prompt, color1, color2, color3, color4,
     # Inject concept grid layout instruction if enabled
     if concept_grid:
         grid_instruction = "arranged in a clean 2x2 grid layout, four distinct minimalist concepts, flat design, white dividing lines, high contrast"
-        final_prompt = f"{final_prompt}, {grid_instruction}" if final_prompt.strip() else grid_instruction
+        final_prompt = f"{final_prompt}, {grid_instruction}" if (final_prompt or "").strip() else grid_instruction
     
     # Inject color palette
     colors = [c for c in [color1, color2, color3, color4, color5] if c and c != '#000000']

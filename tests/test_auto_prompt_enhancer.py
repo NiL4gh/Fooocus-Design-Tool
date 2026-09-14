@@ -33,5 +33,13 @@ class TestAutoPromptEnhancer(unittest.TestCase):
         # Check style negative
         self.assertIn("3d render", neg)
 
+    def test_none_inputs_handled_safely(self):
+        # Should not raise AttributeError when prompt or user_negative is None
+        enhanced = enhance_prompt(None, "Artwork", use_enhancement=False)
+        self.assertEqual(enhanced, "")
+
+        neg = build_negative_prompt(None, "Adobe Stock Silhouette", use_master_negative=True)
+        self.assertIn("photograph", neg)
+
 if __name__ == "__main__":
     unittest.main()
