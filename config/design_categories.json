@@ -10,7 +10,8 @@
       "lora": {
         "source": "DoctorDiffusion/doctor-diffusion-s-stylized-silhouette-photography-xl-lora",
         "weight": 0.9,
-        "trigger_words": "solid black silhouette, vector style"
+        "trigger_words": "solid black silhouette, vector style",
+        "weight_name": "DD-sli-v1.safetensors"
       }
     },
     {
@@ -23,7 +24,8 @@
       "lora": {
         "source": "DoctorDiffusion/doctor-diffusion-s-controllable-vector-art-xl-lora",
         "weight": 0.85,
-        "trigger_words": "flat minimalist vector graphic, vector art style"
+        "trigger_words": "flat minimalist vector graphic, vector art style",
+        "weight_name": "DD-cva-v1.safetensors"
       }
     },
     {

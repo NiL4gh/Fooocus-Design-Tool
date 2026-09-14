@@ -46,8 +46,8 @@ def _save_image(image, output_dir, fmt='png', metadata=None):
 
 
 def _generate(category, prompt, negative_prompt, color1, color2, color3, color4, color5,
-              use_master_neg, use_enhancement, remove_bg, vector_mode, concept_grid, aspect_ratio, seed_val, speed_mode_label,
-              selected_styles=None, base_model=None):
+              use_master_neg, use_enhancement, remove_bg, vector_mode, aspect_ratio, seed_val, speed_mode_label,
+              selected_styles=None, base_model=None, concept_grid=False):
     """Core generation function wired to the Generate button."""
 
     if not (prompt or "").strip() and not category:
@@ -60,11 +60,6 @@ def _generate(category, prompt, negative_prompt, color1, color2, color3, color4,
 
     # Build final prompts
     final_prompt = enhance_prompt(prompt, category, use_enhancement=use_enhancement, selected_styles=selected_styles)
-    
-    # Inject concept grid layout instruction if enabled
-    if concept_grid:
-        grid_instruction = "arranged in a clean 2x2 grid layout, four distinct minimalist concepts, flat design, white dividing lines, high contrast"
-        final_prompt = f"{final_prompt}, {grid_instruction}" if (final_prompt or "").strip() else grid_instruction
     
     # Inject color palette
     colors = [c for c in [color1, color2, color3, color4, color5] if c and c != '#000000']
@@ -297,8 +292,8 @@ def build_tab():
                 )
             speed_choice = gr.Radio(
                 label="⚡ Engine Mode",
-                choices=["⚡ Fast (~3s)", "🎯 Master (~15s)"],
-                value="⚡ Fast (~3s)",
+                choices=["🎯 Master (~15s)", "⚡ Fast (~3s)"],
+                value="🎯 Master (~15s)",
                 interactive=True,
                 elem_id="speed_choice_radio",
             )
@@ -345,7 +340,6 @@ def build_tab():
             with gr.Row():
                 remove_bg = gr.Checkbox(label='Remove background (transparent PNG)', value=True, elem_id='remove_bg')
                 vector_mode = gr.Checkbox(label='Vector mode (SVG)', value=False)
-                concept_grid = gr.Checkbox(label='2x2 Concept Grid', value=False)
  
             aspect_ratio = gr.Dropdown(
                 label='📐 Aspect Ratio',
@@ -369,7 +363,7 @@ def build_tab():
         # RIGHT PANEL - Output
         with gr.Column(scale=3):
             gr.Markdown(
-                "🟢 **Active Engine**: SDXL Juggernaut-XL v9 | **Speed**: ⚡ Fast (~3s Lightning) | **Zero Slider Setup**",
+                "🟢 **Active Engine**: SDXL Juggernaut-XL v9 | **Speed**: 🎯 Master (~15s) | **Zero Slider Setup**",
                 elem_id="engine_status_header"
             )
             status = gr.Textbox(label='Status', interactive=False, elem_id='status_display')
@@ -404,7 +398,7 @@ def build_tab():
         inputs=[
             category, prompt, negative_prompt,
             color1, color2, color3, color4, color5,
-            use_master_neg, use_enhancement, remove_bg, vector_mode, concept_grid,
+            use_master_neg, use_enhancement, remove_bg, vector_mode,
             aspect_ratio, seed_val, speed_choice, styles_selector, base_model_dropdown
         ],
         outputs=[status, preview, gallery]

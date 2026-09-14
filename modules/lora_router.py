@@ -146,15 +146,37 @@ def apply_category_lora(
         return trigger_words
 
     try:
-        # Load adapter if not already in cache
-        if adapter_name not in _loaded_adapters:
+        # Check if adapter is already recognized by PEFT/diffusers
+        already_in_peft = False
+        if hasattr(pipeline, "peft_config") and isinstance(pipeline.peft_config, dict):
+            if adapter_name in pipeline.peft_config:
+                already_in_peft = True
+        elif hasattr(pipeline, "get_active_adapters"):
+            try:
+                if adapter_name in (pipeline.get_active_adapters() or []):
+                    already_in_peft = True
+            except Exception:
+                pass
+
+        # Load adapter if not already in cache and not in PEFT
+        if adapter_name not in _loaded_adapters and not already_in_peft:
             print(f"[LoRA Router] Loading adapter '{adapter_name}' from: {source}")
             weight_name = lora_cfg.get("weight_name")
             kwargs = {"adapter_name": adapter_name}
             if weight_name:
                 kwargs["weight_name"] = weight_name
             
-            pipeline.load_lora_weights(source, **kwargs)
+            try:
+                pipeline.load_lora_weights(source, **kwargs)
+                _loaded_adapters[adapter_name] = source
+            except Exception as load_err:
+                err_str = str(load_err).lower()
+                if "already in use" in err_str:
+                    print(f"[LoRA Router] Adapter '{adapter_name}' already registered in PEFT, activating directly.")
+                    _loaded_adapters[adapter_name] = source
+                else:
+                    raise load_err
+        else:
             _loaded_adapters[adapter_name] = source
 
         # Set active adapter and scale weight

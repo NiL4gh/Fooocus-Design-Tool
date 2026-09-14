@@ -98,6 +98,18 @@ class TestFooocusDesignTool(unittest.TestCase):
         self.assertIn("</svg>", svg_code)
         self.assertIn("MOCK SVG LOGO", svg_code)
 
+    def test_contour_vectorization(self):
+        """Test contour SVG vectorizer generates valid path-based SVG."""
+        from modules.starvector_pipeline import _trace_contours_to_svg
+        img = Image.new("RGBA", (100, 100), (0, 0, 0, 0))
+        from PIL import ImageDraw
+        draw = ImageDraw.Draw(img)
+        draw.rectangle((20, 20, 80, 80), fill=(255, 0, 0, 255))
+        svg_code = _trace_contours_to_svg(img)
+        self.assertIn("<svg", svg_code)
+        self.assertIn("</svg>", svg_code)
+        self.assertIn("<path", svg_code)
+
     def test_background_remover_mock(self):
         """Test mock background remover makes dark pixels transparent."""
         # Create image with Slate Dark color '#0f172a' (approx 15, 23, 42)
