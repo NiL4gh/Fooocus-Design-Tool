@@ -11,9 +11,24 @@ from modules.design_categories import get_category_names, get_category, get_defa
 from modules.auto_prompt_enhancer import enhance_prompt, build_negative_prompt
 from modules.palette_control import inject_palette_prompt, apply_palette_post, get_palette_presets, get_preset_colors
 from modules.metadata_manager import build_metadata, save_image_with_metadata, extract_metadata
-from modules.sdxl_pipeline import generate as sdxl_generate
+from modules.sdxl_pipeline import generate as sdxl_generate, get_base_model_choices, resolve_base_model_id
 from modules.style_engine import get_available_styles
 from modules import config
+
+
+def _get_lora_status(category: str) -> str:
+    """Return formatted status markdown describing the active LoRA for the selected category."""
+    if not category:
+        return "🏷️ **Active LoRA:** None"
+    cfg = get_category(category)
+    if cfg and cfg.get("lora"):
+        lora_info = cfg.get("lora")
+        source = lora_info.get("source", "")
+        name = lora_info.get("name") or (source.split("/")[-1] if "/" in source else source) or "Custom LoRA"
+        weight = lora_info.get("weight", 0.8)
+        triggers = lora_info.get("trigger_words") or ", ".join(cfg.get("trigger_words", [])) or "None"
+        return f"🏷️ **Active Baked LoRA:** `{name}` (Weight: `{weight:.2f}`) | **Triggers:** `{triggers}`"
+    return "🏷️ **Active Baked LoRA:** None (Direct SDXL base model with trigger conditioning)"
 
 
 def _save_image(image, output_dir, fmt='png', metadata=None):
@@ -32,7 +47,7 @@ def _save_image(image, output_dir, fmt='png', metadata=None):
 
 def _generate(category, prompt, negative_prompt, color1, color2, color3, color4, color5,
               use_master_neg, use_enhancement, remove_bg, vector_mode, concept_grid, aspect_ratio, seed_val, speed_mode_label,
-              selected_styles=None):
+              selected_styles=None, base_model=None):
     """Core generation function wired to the Generate button."""
 
     if not (prompt or "").strip() and not category:
@@ -72,8 +87,8 @@ def _generate(category, prompt, negative_prompt, color1, color2, color3, color4,
         try:
             from modules.starvector_pipeline import image_to_svg, load_model
 
-            # First generate raster, then vectorize
-            yield "🎨 Generating raster base image using SDXL Juggernaut...", None, []
+            model_label = base_model.split("(")[0].strip() if base_model else "Juggernaut XL v9"
+            yield f"🎨 Generating raster base image using {model_label}...", None, []
             image, used_seed = sdxl_generate(
                 prompt=final_prompt,
                 negative_prompt=final_negative,
@@ -82,6 +97,7 @@ def _generate(category, prompt, negative_prompt, color1, color2, color3, color4,
                 seed=seed,
                 speed_mode=speed_mode,
                 category_cfg=cat_cfg,
+                base_model=base_model,
             )
 
             yield "✏️ Vectorizing to SVG...", None, []
@@ -117,7 +133,8 @@ def _generate(category, prompt, negative_prompt, color1, color2, color3, color4,
     else:
         # Standard raster generation
         try:
-            yield "🎨 Generating image using SDXL Juggernaut...", None, []
+            model_label = base_model.split("(")[0].strip() if base_model else "Juggernaut XL v9"
+            yield f"🎨 Generating with {model_label} ({speed_mode} mode)...", None, []
             image, used_seed = sdxl_generate(
                 prompt=final_prompt,
                 negative_prompt=final_negative,
@@ -126,6 +143,7 @@ def _generate(category, prompt, negative_prompt, color1, color2, color3, color4,
                 seed=seed,
                 speed_mode=speed_mode,
                 category_cfg=cat_cfg,
+                base_model=base_model,
             )
 
             # Apply palette post-processing
@@ -230,6 +248,7 @@ def _on_category_change(category):
     transparent = get_default_transparent(category)
     ar = get_default_aspect_ratio(category)
     default_styles = ["Fooocus V2"] if category in ["Artwork", "Poster"] else []
+    lora_label = _get_lora_status(category)
     
     # Find matching aspect ratio label
     ar_labels = config.get_aspect_ratio_labels()
@@ -241,7 +260,7 @@ def _on_category_change(category):
             selected_ar = label
             break
 
-    return gr.update(value=transparent), gr.update(value=selected_ar), gr.update(), gr.update(value=default_styles)
+    return gr.update(value=transparent), gr.update(value=selected_ar), gr.update(value=lora_label), gr.update(value=default_styles)
 
 
 def build_tab():
@@ -260,6 +279,22 @@ def build_tab():
                 interactive=True,
                 elem_id='category_dropdown'
             )
+            with gr.Accordion('🤖 Model & Architecture (SDXL)', open=False):
+                base_model_dropdown = gr.Dropdown(
+                    label='📦 Base SDXL Checkpoint',
+                    choices=get_base_model_choices(),
+                    value=get_base_model_choices()[0],
+                    interactive=True,
+                    elem_id='base_model_dropdown',
+                )
+                lora_status = gr.Markdown(
+                    value=_get_lora_status(generate_categories[0] if generate_categories else None),
+                    elem_id='lora_status_markdown',
+                )
+                gr.Markdown(
+                    "⚡ **Fast Mode**: ByteDance SDXL-Lightning 4-step LoRA (~3s generation, rapid concepting).\n\n"
+                    "🎯 **Master Mode**: Full 28-step DPM++ 2M Karras scheduler (maximum detail & 100% LoRA fidelity)."
+                )
             speed_choice = gr.Radio(
                 label="⚡ Engine Mode",
                 choices=["⚡ Fast (~3s)", "🎯 Master (~15s)"],
@@ -333,6 +368,10 @@ def build_tab():
  
         # RIGHT PANEL - Output
         with gr.Column(scale=3):
+            gr.Markdown(
+                "🟢 **Active Engine**: SDXL Juggernaut-XL v9 | **Speed**: ⚡ Fast (~3s Lightning) | **Zero Slider Setup**",
+                elem_id="engine_status_header"
+            )
             status = gr.Textbox(label='Status', interactive=False, elem_id='status_display')
             preview = gr.Image(label='Preview', type='pil', interactive=False, height=512)
             gallery = gr.Gallery(label='Generated Images', columns=4, height=300,
@@ -342,7 +381,7 @@ def build_tab():
     category.change(
         _on_category_change,
         inputs=[category],
-        outputs=[remove_bg, aspect_ratio, status, styles_selector],
+        outputs=[remove_bg, aspect_ratio, lora_status, styles_selector],
     )
  
     palette_preset.change(
@@ -366,7 +405,7 @@ def build_tab():
             category, prompt, negative_prompt,
             color1, color2, color3, color4, color5,
             use_master_neg, use_enhancement, remove_bg, vector_mode, concept_grid,
-            aspect_ratio, seed_val, speed_choice, styles_selector
+            aspect_ratio, seed_val, speed_choice, styles_selector, base_model_dropdown
         ],
         outputs=[status, preview, gallery]
     )

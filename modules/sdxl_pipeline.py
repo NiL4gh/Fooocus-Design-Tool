@@ -17,11 +17,36 @@ from modules.lora_router import apply_category_lora, clear_adapters, get_active_
 _pipeline = None
 _device = None
 _current_speed_mode = None
+_current_base_model = None
 
 # Default Base Model and Lightning Scheduler / LoRA
 DEFAULT_SDXL_MODEL = "RunDiffusion/Juggernaut-XL-v9"
 LIGHTNING_LORA_REPO = "ByteDance/SDXL-Lightning"
 LIGHTNING_LORA_WEIGHT = "sdxl_lightning_4step_lora.safetensors"
+
+SUPPORTED_BASE_MODELS = {
+    "Juggernaut XL v9 (Commercial Graphic Design & Assets)": "RunDiffusion/Juggernaut-XL-v9",
+    "SDXL Base 1.0 (Official Stability AI)": "stabilityai/stable-diffusion-xl-base-1.0",
+    "Animagine XL 3.1 (Anime & Stylized Art)": "cagliostrolab/animagine-xl-3.1",
+    "RealVisXL v4.0 (Photorealistic & Mockups)": "SG161222/RealVisXL_V4.0",
+}
+
+
+def get_base_model_choices() -> List[str]:
+    """Return friendly display names for supported SDXL base checkpoints."""
+    return list(SUPPORTED_BASE_MODELS.keys())
+
+
+def resolve_base_model_id(model_label_or_id: Optional[str]) -> str:
+    """Resolve display label or raw repo ID to valid HuggingFace model ID."""
+    if not model_label_or_id:
+        return DEFAULT_SDXL_MODEL
+    return SUPPORTED_BASE_MODELS.get(model_label_or_id, model_label_or_id)
+
+
+def get_current_base_model() -> str:
+    """Return the currently loaded base model ID."""
+    return _current_base_model or DEFAULT_SDXL_MODEL
 
 
 def get_device() -> str:
@@ -38,31 +63,40 @@ def get_device() -> str:
     return _device
 
 
-def load_pipeline(speed_mode: str = "fast", progress_callback=None):
+def load_pipeline(speed_mode: str = "fast", base_model: Optional[str] = None, progress_callback=None):
     """
     Load SDXL pipeline with PyTorch SDPA, VAE tiling/slicing, and memory safeguards.
 
     Args:
         speed_mode: "fast" (SDXL-Lightning 5-step) or "master" (Juggernaut-XL 25-step).
+        base_model: Display label or HuggingFace ID for base SDXL checkpoint.
         progress_callback: Optional callable(message) for UI progress updates.
 
     Returns:
         The loaded StableDiffusionXLPipeline.
     """
-    global _pipeline, _current_speed_mode
+    global _pipeline, _current_speed_mode, _current_base_model
+
+    model_id = resolve_base_model_id(base_model)
 
     if os.environ.get("MOCK_IMAGE_GEN") == "1":
         if _pipeline is None:
             _pipeline = "mock_pipeline"
         _current_speed_mode = speed_mode
+        _current_base_model = model_id
         return _pipeline
+
+    # If base model changed, unload existing pipeline
+    if _pipeline is not None and _current_base_model != model_id:
+        print(f"[SDXL Pipeline] Switching base model from {_current_base_model} to {model_id}...")
+        unload_pipeline()
 
     if _pipeline is not None:
         if _current_speed_mode == speed_mode:
             return _pipeline
 
     if progress_callback:
-        progress_callback(f"Warming up Juggernaut XL ({speed_mode} mode)...")
+        progress_callback(f"Warming up SDXL [{model_id}] ({speed_mode} mode)...")
 
     gc.collect()
     if torch.cuda.is_available():
@@ -74,17 +108,29 @@ def load_pipeline(speed_mode: str = "fast", progress_callback=None):
     try:
         from diffusers import StableDiffusionXLPipeline, EulerDiscreteScheduler
 
+        # Safeguard: prevent diffusers from failing if an incompatible torchao is installed (<0.16.0)
+        try:
+            import diffusers.utils.import_utils as diu
+            if hasattr(diu, "is_torchao_available"):
+                import torchao
+                from packaging import version
+                if version.parse(torchao.__version__) < version.parse("0.16.0"):
+                    diu.is_torchao_available = lambda: False
+        except Exception:
+            pass
+
         if _pipeline is None:
             if progress_callback:
-                progress_callback(f"Loading {DEFAULT_SDXL_MODEL} in FP16...")
+                progress_callback(f"Loading {model_id} in FP16...")
 
             _pipeline = StableDiffusionXLPipeline.from_pretrained(
-                DEFAULT_SDXL_MODEL,
+                model_id,
                 torch_dtype=dtype,
                 variant="fp16" if device == "cuda" else None,
                 use_safetensors=True,
                 low_cpu_mem_usage=True,
             )
+            _current_base_model = model_id
 
             if device == "cuda":
                 _pipeline.to("cuda")
@@ -106,19 +152,24 @@ def load_pipeline(speed_mode: str = "fast", progress_callback=None):
                 timestep_spacing="trailing"
             )
             # Load ByteDance SDXL-Lightning LoRA if not already applied
+            lightning_loaded = False
             try:
                 _pipeline.load_lora_weights(
                     LIGHTNING_LORA_REPO,
                     weight_name=LIGHTNING_LORA_WEIGHT,
                     adapter_name="lightning_fast"
                 )
+                lightning_loaded = True
             except Exception as e:
                 print(f"[SDXL Pipeline] Lightning adapter notice: {e}")
 
-            if hasattr(_pipeline, "enable_lora"):
-                _pipeline.enable_lora()
-            if hasattr(_pipeline, "set_adapters"):
-                _pipeline.set_adapters(["lightning_fast"], adapter_weights=[1.0])
+            if lightning_loaded:
+                if hasattr(_pipeline, "enable_lora"):
+                    _pipeline.enable_lora()
+                if hasattr(_pipeline, "set_adapters"):
+                    _pipeline.set_adapters(["lightning_fast"], adapter_weights=[1.0])
+            else:
+                print("[SDXL Pipeline] Lightning adapter not active; running in fast mode with EulerTrailing")
         else:
             # Master mode: standard DPM++ 2M Karras or Euler
             from diffusers import DPMSolverMultistepScheduler
@@ -159,6 +210,7 @@ def generate(
     seed: int = -1,
     speed_mode: str = "fast",
     category_cfg: Optional[Dict[str, Any]] = None,
+    base_model: Optional[str] = None,
     progress_callback=None,
 ) -> Tuple[Image.Image, int]:
     """
@@ -172,6 +224,7 @@ def generate(
         seed: Random seed (-1 for random).
         speed_mode: "fast" (5-6 steps) or "master" (25-28 steps).
         category_cfg: Category configuration containing optional baked LoRA.
+        base_model: Optional base SDXL checkpoint identifier.
         progress_callback: Progress reporting callable.
 
     Returns:
@@ -180,7 +233,7 @@ def generate(
     if seed == -1 or seed is None:
         seed = random.randint(0, 2**32 - 1)
 
-    pipe = load_pipeline(speed_mode=speed_mode, progress_callback=progress_callback)
+    pipe = load_pipeline(speed_mode=speed_mode, base_model=base_model, progress_callback=progress_callback)
 
     # Configure adapters on pipe
     base_adapters = ["lightning_fast"] if speed_mode == "fast" else None
@@ -294,12 +347,13 @@ def generate_variations(
 
 def unload_pipeline() -> None:
     """Free VRAM by deleting pipeline and releasing CUDA cache."""
-    global _pipeline, _current_speed_mode
+    global _pipeline, _current_speed_mode, _current_base_model
     if _pipeline is not None:
         clear_adapters(_pipeline)
         del _pipeline
         _pipeline = None
         _current_speed_mode = None
+        _current_base_model = None
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
         gc.collect()

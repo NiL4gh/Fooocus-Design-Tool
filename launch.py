@@ -35,6 +35,19 @@ if missing:
     print(f'[Setup] Installing missing dependencies: {missing}')
     install_requirements()
 
+def check_torchao_compatibility():
+    """Ensure pre-installed torchao (<0.16.0) does not break diffusers LoRA loading."""
+    try:
+        import torchao
+        from packaging import version
+        if version.parse(torchao.__version__) < version.parse("0.16.0"):
+            print(f"[Setup] Removing incompatible torchao ({torchao.__version__}) to avoid diffusers conflict...")
+            subprocess.check_call([sys.executable, '-m', 'pip', 'uninstall', '-y', 'torchao'])
+    except Exception:
+        pass
+
+check_torchao_compatibility()
+
 def patch_gradio_client():
     """Apply type-safe patch to gradio_client to prevent Pydantic v2 OpenAPI schema crashes."""
     try:

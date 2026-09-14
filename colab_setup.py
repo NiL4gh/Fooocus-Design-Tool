@@ -97,16 +97,31 @@ def setup_and_launch(share=True, use_ngrok=False, ngrok_token=None, preload=Fals
             "https://download.pytorch.org/whl/cu121"
         ], check=True)
 
+    # Remove incompatible torchao if present to avoid diffusers LoRA conflict
+    try:
+        import torchao
+        from packaging import version
+        if version.parse(torchao.__version__) < version.parse("0.16.0"):
+            print("🔧 Removing incompatible torchao (<0.16.0)...")
+            sys.stdout.flush()
+            subprocess.run([sys.executable, "-m", "pip", "uninstall", "-y", "torchao"], check=False)
+    except Exception:
+        pass
+
     # 4. Optional model pre-caching
     if preload:
-        print("\n📥 Pre-downloading SDXL models into cache (Juggernaut-XL ~6.6GB + Lightning LoRA ~300MB)...")
+        print("\n" + "=" * 60)
+        print("📦 Pre-downloading Base Model: RunDiffusion/Juggernaut-XL-v9 (SDXL FP16 ~6.6GB)")
+        print("⚡ Pre-downloading Speed Adapter: ByteDance/SDXL-Lightning (4-step LoRA ~390MB)")
+        print("🏷️ Categories: Baked commercial design LoRAs (zero-reload dynamic routing)")
+        print("=" * 60)
         print("   Showing live download progress:")
         sys.stdout.flush()
         subprocess.run([
             sys.executable, "-u", "-c",
             "from modules.sdxl_pipeline import load_pipeline, unload_pipeline; "
             "load_pipeline(speed_mode='fast'); unload_pipeline(); "
-            "print('✅ SDXL models cached successfully!')"
+            "print('\n✅ SDXL models and speed adapters cached successfully!')"
         ], check=True)
 
     # 5. Optional ngrok setup
