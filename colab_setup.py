@@ -7,14 +7,34 @@ import os
 import subprocess
 import sys
 
+# Ensure stdout flushes immediately without buffer delays
+os.environ["PYTHONUNBUFFERED"] = "1"
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(line_buffering=True)
+
 
 def ensure_repo_dir(repo_url: str = "https://github.com/NiL4gh/Fooocus-Design-Tool.git"):
-    """Ensure working directory is inside the cloned repository root."""
+    """Ensure working directory is inside the cloned repository root without double nesting."""
+    if os.path.exists("/content"):
+        target = "/content/Fooocus-Design-Tool"
+        if os.path.exists(os.path.join(target, "launch.py")):
+            os.chdir(target)
+            return
+        os.chdir("/content")
+        if not os.path.exists("Fooocus-Design-Tool"):
+            print("\n📦 Cloning repository into /content/Fooocus-Design-Tool...")
+            sys.stdout.flush()
+            subprocess.run(["git", "clone", repo_url], check=True)
+        if os.path.exists("Fooocus-Design-Tool"):
+            os.chdir("Fooocus-Design-Tool")
+        return
+
     if os.path.exists("launch.py") and os.path.exists("requirements.txt"):
         return
 
     if not os.path.exists("Fooocus-Design-Tool"):
         print("\n📦 Cloning repository...")
+        sys.stdout.flush()
         subprocess.run(["git", "clone", repo_url], check=True)
 
     if os.path.exists("Fooocus-Design-Tool"):
@@ -49,36 +69,41 @@ def setup_and_launch(share=True, use_ngrok=False, ngrok_token=None, preload=Fals
     print("   Engine: RunDiffusion/Juggernaut-XL-v9 (SDXL) + Baked LoRAs")
     print("   Performance: ⚡ Fast (~3s Lightning) | 🎯 Master (~15s SDXL)")
     print("=" * 60)
+    sys.stdout.flush()
 
     # 1. Ensure repo root directory
     ensure_repo_dir()
 
     # 2. Install dependencies
-    print("\n📥 Installing dependencies...")
-    subprocess.run([sys.executable, "-m", "pip", "install", "-r", "requirements.txt", "-q"], check=True)
+    print("\n📥 Installing dependencies (this takes ~1-2 minutes on first run)...")
+    sys.stdout.flush()
+    subprocess.run([sys.executable, "-m", "pip", "install", "-r", "requirements.txt"], check=True)
 
     # 3. Check / Install PyTorch with CUDA if needed
     try:
         import torch
         if not torch.cuda.is_available() and not demo:
             print("⚠️ CUDA not available. Installing PyTorch with CUDA...")
+            sys.stdout.flush()
             subprocess.run([
                 sys.executable, "-m", "pip", "install",
                 "torch", "torchvision", "--extra-index-url",
-                "https://download.pytorch.org/whl/cu121", "-q"
+                "https://download.pytorch.org/whl/cu121"
             ], check=True)
     except ImportError:
         subprocess.run([
             sys.executable, "-m", "pip", "install",
             "torch", "torchvision", "--extra-index-url",
-            "https://download.pytorch.org/whl/cu121", "-q"
+            "https://download.pytorch.org/whl/cu121"
         ], check=True)
 
     # 4. Optional model pre-caching
     if preload:
-        print("\n📥 Pre-downloading SDXL models into cache...")
+        print("\n📥 Pre-downloading SDXL models into cache (Juggernaut-XL ~6.6GB + Lightning LoRA ~300MB)...")
+        print("   Showing live download progress:")
+        sys.stdout.flush()
         subprocess.run([
-            sys.executable, "-c",
+            sys.executable, "-u", "-c",
             "from modules.sdxl_pipeline import load_pipeline, unload_pipeline; "
             "load_pipeline(speed_mode='fast'); unload_pipeline(); "
             "print('✅ SDXL models cached successfully!')"
@@ -87,17 +112,20 @@ def setup_and_launch(share=True, use_ngrok=False, ngrok_token=None, preload=Fals
     # 5. Optional ngrok setup
     if use_ngrok and ngrok_token:
         print("\n🔗 Setting up ngrok tunnel...")
-        subprocess.run([sys.executable, "-m", "pip", "install", "pyngrok", "-q"], check=True)
+        sys.stdout.flush()
+        subprocess.run([sys.executable, "-m", "pip", "install", "pyngrok"], check=True)
         from pyngrok import ngrok
         ngrok.set_auth_token(ngrok_token)
         tunnel = ngrok.connect(7865)
         print(f"🌐 Public URL: {tunnel.public_url}")
+        sys.stdout.flush()
 
     # 6. Launch
     print("\n🚀 Launching Fooocus Designer 2.0...")
     print("=" * 60)
+    sys.stdout.flush()
 
-    launch_cmd = [sys.executable, "launch.py"]
+    launch_cmd = [sys.executable, "-u", "launch.py"]
     if share and not use_ngrok:
         launch_cmd.append("--share")
     if demo:

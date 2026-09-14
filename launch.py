@@ -22,10 +22,9 @@ def is_installed(package):
 
 
 def install_requirements():
-    """Install required packages."""
     req_file = os.path.join(root, 'requirements.txt')
     if os.path.exists(req_file):
-        subprocess.check_call([sys.executable, '-m', 'pip', 'install', '-r', req_file, '-q'])
+        subprocess.check_call([sys.executable, '-m', 'pip', 'install', '-r', req_file])
 
 
 # Check core dependencies
