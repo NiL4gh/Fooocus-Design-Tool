@@ -321,6 +321,7 @@ def build_tab():
                 ai_enhance_btn = gr.Button("🪄 ✨ Enhance Prompt with AI Copilot", size="sm", variant="secondary", elem_id="ai_enhance_btn")
             
             with gr.Accordion('🤖 AI Prompt Copilot Settings', open=False):
+                from modules.ai_copilot import get_default_system_prompt
                 ai_mode_choice = gr.Radio(
                     label="Copilot Engine",
                     choices=["Fast Heuristic Engine", "Local Qwen2.5-0.5B (CPU)", "Cloud API (Groq / OpenAI)"],
@@ -332,6 +333,14 @@ def build_tab():
                     placeholder="Enter Groq (gsk_...) or OpenAI (sk-...) key...",
                     type="password",
                     max_lines=1
+                )
+                ai_system_prompt = gr.Textbox(
+                    label="Custom Agent Prompt / Directives",
+                    value=get_default_system_prompt(),
+                    lines=4,
+                    placeholder="Enter custom instructions or system prompt for the AI Copilot...",
+                    interactive=True,
+                    elem_id="ai_system_prompt_input"
                 )
 
             with gr.Accordion('📝 Negative Prompt', open=False):
@@ -469,15 +478,17 @@ def build_tab():
         outputs=[status, svg_download_file]
     )
 
-    def _on_ai_enhance(p_val, cat_val, mode_val, key_val):
+    def _on_ai_enhance(p_val, cat_val, mode_val, key_val, sys_prompt_val):
         from modules.ai_copilot import enhance_prompt_with_ai
         mode = "local" if "local" in str(mode_val).lower() else "hybrid"
-        enh_p, enh_neg = enhance_prompt_with_ai(p_val, category=cat_val, api_key=key_val, mode=mode)
+        enh_p, enh_neg = enhance_prompt_with_ai(
+            p_val, category=cat_val, api_key=key_val, mode=mode, custom_system_prompt=sys_prompt_val
+        )
         return gr.update(value=enh_p), gr.update(value=enh_neg), "✨ Prompt enhanced by AI Copilot for commercial quality!"
 
     ai_enhance_btn.click(
         _on_ai_enhance,
-        inputs=[prompt, category, ai_mode_choice, ai_api_key],
+        inputs=[prompt, category, ai_mode_choice, ai_api_key, ai_system_prompt],
         outputs=[prompt, negative_prompt, status]
     )
 

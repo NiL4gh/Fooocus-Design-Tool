@@ -15,6 +15,28 @@ _local_llm_model = None
 _local_llm_tokenizer = None
 LOCAL_MODEL_ID = "Qwen/Qwen2.5-0.5B-Instruct"
 
+CONFIG_PROMPT_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'config', 'copilot_system_prompt.txt')
+
+DEFAULT_SYSTEM_PROMPT = (
+    "You are an expert commercial graphic design prompt engineer for Stable Diffusion XL.\n"
+    "Your task is to take a raw user idea and return an enhanced positive prompt and a negative prompt.\n"
+    "Respond ONLY with a valid JSON object in this format:\n"
+    '{"prompt": "enhanced prompt here", "negative_prompt": "negative prompt here"}'
+)
+
+
+def get_default_system_prompt() -> str:
+    """Load default system prompt from config file or return built-in standard."""
+    try:
+        if os.path.exists(CONFIG_PROMPT_PATH):
+            with open(CONFIG_PROMPT_PATH, 'r', encoding='utf-8') as f:
+                content = f.read().strip()
+                if content:
+                    return content
+    except Exception:
+        pass
+    return DEFAULT_SYSTEM_PROMPT
+
 # Commercial design expansion dictionary for instant heuristic enhancement
 CATEGORY_MODIFIERS = {
     "Adobe Stock Silhouette": {
@@ -73,7 +95,7 @@ def _heuristic_enhance(prompt: str, category: str = "") -> Tuple[str, str]:
     return enhanced, negative
 
 
-def _call_groq_or_openai(prompt: str, category: str, api_key: str, base_url: Optional[str] = None) -> Optional[Tuple[str, str]]:
+def _call_groq_or_openai(prompt: str, category: str, api_key: str, custom_system_prompt: Optional[str] = None, base_url: Optional[str] = None) -> Optional[Tuple[str, str]]:
     """Call OpenAI-compatible endpoint (Groq, OpenAI, OpenRouter) for prompt expansion."""
     if not api_key:
         return None
@@ -81,10 +103,10 @@ def _call_groq_or_openai(prompt: str, category: str, api_key: str, base_url: Opt
     url = base_url or "https://api.groq.com/openai/v1/chat/completions" if "gsk_" in api_key else "https://api.openai.com/v1/chat/completions"
     model = "llama-3.1-8b-instant" if "gsk_" in api_key else "gpt-4o-mini"
 
+    base_sys = custom_system_prompt.strip() if (custom_system_prompt and custom_system_prompt.strip()) else get_default_system_prompt()
     sys_msg = (
-        "You are an expert graphic design AI prompt engineer for Stable Diffusion XL. "
-        "Your task is to take a raw user idea and return an enhanced positive prompt and a negative prompt. "
-        "Respond ONLY with a valid JSON object in this format: "
+        f"{base_sys}\n\n"
+        "Return your response ONLY as a valid JSON object in this format: "
         '{"prompt": "enhanced prompt here", "negative_prompt": "negative prompt here"}'
     )
     user_msg = f"Category: {category or 'General Graphic Asset'}\nUser Idea: {prompt}"
@@ -122,7 +144,7 @@ def _call_groq_or_openai(prompt: str, category: str, api_key: str, base_url: Opt
         return None
 
 
-def _call_local_tiny_llm(prompt: str, category: str) -> Optional[Tuple[str, str]]:
+def _call_local_tiny_llm(prompt: str, category: str, custom_system_prompt: Optional[str] = None) -> Optional[Tuple[str, str]]:
     """Run local Qwen2.5-0.5B-Instruct on CPU without consuming GPU VRAM."""
     global _local_llm_model, _local_llm_tokenizer
     if os.environ.get("MOCK_IMAGE_GEN") == "1":
@@ -144,8 +166,11 @@ def _call_local_tiny_llm(prompt: str, category: str) -> Optional[Tuple[str, str]
             _local_llm_model.eval()
 
         system_instruction = (
-            "You are a professional SDXL prompt enhancer. Expand the user's idea into a single line of descriptive, "
-            "photorealistic or vector design tags with lighting and clean background. Keep it under 60 words."
+            custom_system_prompt.strip() if (custom_system_prompt and custom_system_prompt.strip())
+            else (
+                "You are a professional SDXL prompt enhancer. Expand the user's idea into a single line of descriptive, "
+                "photorealistic or vector design tags with lighting and clean background. Keep it under 60 words."
+            )
         )
         messages = [
             {"role": "system", "content": system_instruction},
@@ -171,7 +196,13 @@ def _call_local_tiny_llm(prompt: str, category: str) -> Optional[Tuple[str, str]
         return None
 
 
-def enhance_prompt_with_ai(prompt: str, category: str = "", api_key: str = "", mode: str = "hybrid") -> Tuple[str, str]:
+def enhance_prompt_with_ai(
+    prompt: str,
+    category: str = "",
+    api_key: str = "",
+    mode: str = "hybrid",
+    custom_system_prompt: Optional[str] = None
+) -> Tuple[str, str]:
     """
     Main entry point for AI prompt enhancement.
     1. If api_key is provided, attempts fast API call (Groq/OpenAI).
@@ -182,12 +213,12 @@ def enhance_prompt_with_ai(prompt: str, category: str = "", api_key: str = "", m
         return _heuristic_enhance(prompt, category)
 
     if api_key and api_key.strip():
-        res = _call_groq_or_openai(prompt, category, api_key.strip())
+        res = _call_groq_or_openai(prompt, category, api_key.strip(), custom_system_prompt=custom_system_prompt)
         if res:
             return res
 
     if mode == "local" and os.environ.get("MOCK_IMAGE_GEN") != "1":
-        res = _call_local_tiny_llm(prompt, category)
+        res = _call_local_tiny_llm(prompt, category, custom_system_prompt=custom_system_prompt)
         if res:
             return res
 

@@ -97,15 +97,64 @@ print('[Fooocus Design Tool] Dependencies OK. Launching UI...')
 # Import and launch
 from webui import app
 
+def start_cloudflared(port: int = 7865):
+    """Start Cloudflare Tunnel if cloudflared binary is detected on the system."""
+    try:
+        import shutil
+        import threading
+        import re
+
+        cf_bin = shutil.which("cloudflared")
+        if not cf_bin and os.path.exists("/usr/local/bin/cloudflared"):
+            cf_bin = "/usr/local/bin/cloudflared"
+        if not cf_bin and os.path.exists("/usr/bin/cloudflared"):
+            cf_bin = "/usr/bin/cloudflared"
+
+        if not cf_bin:
+            return
+
+        proc = subprocess.Popen(
+            [cf_bin, "tunnel", "--url", f"http://127.0.0.1:{port}"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+
+        def read_tunnel():
+            for line in proc.stderr:
+                m = re.search(r"(https://[a-zA-Z0-9\-]+\.trycloudflare\.com)", line)
+                if m:
+                    url = m.group(1)
+                    print("\n" + "=" * 60)
+                    print(f"🌐 Cloudflare Tunnel (Rock-Solid, Zero Disconnects):")
+                    print(f"   {url}")
+                    print("=" * 60 + "\n")
+                    break
+
+        threading.Thread(target=read_tunnel, daemon=True).start()
+    except Exception:
+        pass
+
+
 is_colab = bool(os.environ.get("COLAB_GPU") or os.environ.get("COLAB_RELEASE_TAG"))
 server_name = "0.0.0.0" if (is_colab or "--share" in sys.argv or "--listen" in sys.argv) else "127.0.0.1"
 share_flag = ("--share" in sys.argv or is_colab or "--no-share" not in sys.argv)
 inbrowser_flag = ("--no-browser" not in sys.argv and not is_colab)
 port = int(os.environ.get("GRADIO_SERVER_PORT", "7865"))
 
-app.queue().launch(
+start_cloudflared(port)
+
+app.queue(
+    default_concurrency_limit=4,
+    status_update_rate="auto",
+    api_open=False,
+    max_size=64,
+).launch(
     server_name=server_name,
     server_port=port,
     share=share_flag,
     inbrowser=inbrowser_flag,
+    show_error=True,
+    max_threads=40,
 )
+
