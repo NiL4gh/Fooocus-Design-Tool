@@ -9,8 +9,28 @@ import random
 import numpy as np
 from PIL import Image
 
-SUPPORTED_PRODUCTS = ["T-Shirt", "Mug", "Business Card", "Billboard", "Phone Case"]
-MOCKUP_STYLES = ["Single Product (Centered)", "Bento Knolling Layout", "Realistic Ambient Scene"]
+SUPPORTED_PRODUCTS = [
+    "T-Shirt",
+    "Hoodie / Sweatshirt",
+    "Ceramic Mug",
+    "Canvas Tote Bag",
+    "Minimalist Poster Frame",
+    "Phone Case",
+    "Business Card",
+    "Product Packaging Box",
+    "Billboard",
+    "Laptop Skin",
+    "Coffee Cup / Tumbler",
+    "Glass Bottle",
+]
+MOCKUP_STYLES = [
+    "Single Product (Centered)",
+    "Bento Knolling Layout",
+    "Realistic Ambient Scene",
+    "Minimalist Concrete Pedestal",
+    "Dark Luxury Chiaroscuro",
+    "Urban Street Sunlight",
+]
 
 def get_product_types():
     return SUPPORTED_PRODUCTS
@@ -160,6 +180,21 @@ def generate_mockup(logo_image, product_type, prompt="", mockup_style="Single Pr
             f"in a realistic authentic daily usage environment, soft natural ambient lighting, "
             f"commercial stock photo quality, photorealistic"
         )
+    elif mockup_style == "Minimalist Concrete Pedestal":
+        mockup_prompt = (
+            f"a minimalist architectural product photography of a blank plain empty solid {product_name} "
+            f"displayed on a geometric concrete podium pedestal, brutalist studio lighting, subtle soft shadows, gallery exhibition"
+        )
+    elif mockup_style == "Dark Luxury Chiaroscuro":
+        mockup_prompt = (
+            f"a dramatic dark luxury commercial photography of an unbranded solid {product_name}, "
+            f"chiaroscuro spotlight, deep moody shadows, obsidian stone background, premium gold ambient rim light, high-end catalog"
+        )
+    elif mockup_style == "Urban Street Sunlight":
+        mockup_prompt = (
+            f"an authentic editorial street photography of a blank plain solid {product_name} "
+            f"in an urban outdoor city environment, golden hour sunlight, architectural concrete reflections, high depth of field"
+        )
     else:  # "Single Product (Centered)"
         mockup_prompt = (
             f"a professional high-quality product photography of a blank plain empty solid {product_name} "
@@ -212,8 +247,9 @@ def generate_mockup(logo_image, product_type, prompt="", mockup_style="Single Pr
         
         logo_resized = logo_rgba.resize((new_w, new_h), Image.Resampling.LANCZOS)
 
-        # 4a. Apply advanced 3D perspective warp for cylindrical objects (Mugs)
-        if product_type == "Mug":
+        # 4a. Apply advanced 3D perspective warp for cylindrical objects
+        is_cylinder = any(c in product_type.lower() for c in ["mug", "cup", "tumbler", "bottle"])
+        if is_cylinder:
             if progress_cb:
                 progress_cb("🌀 Wrapping logo around cylindrical cup curvature...")
             logo_resized = cylinder_warp(logo_resized, angle_deg=65)

@@ -72,11 +72,12 @@ def build_tab():
             mockup_logo = gr.Image(label='📷 Upload Logo', type='pil', sources=['upload'], height=300)
             mockup_model_choice = gr.Dropdown(
                 label="⚡ Engine Mode",
-                choices=["⚡ Fast (~3s)", "🎯 Master (~15s)"],
-                value="⚡ Fast (~3s)",
+                choices=["🎯 Master (~15s)", "⚡ Fast (~3s)"],
+                value="🎯 Master (~15s)",
                 interactive=True,
                 elem_id="mockup_model_dropdown"
             )
+            clean_logo_btn = gr.Button("🧹 Pre-remove Logo Background", size="sm", variant="secondary")
             
             with gr.Row():
                 mockup_product = gr.Dropdown(label='🏷️ Product Type', choices=get_product_types(),
@@ -94,10 +95,26 @@ def build_tab():
             mockup_preview = gr.Image(label='Mockup Result', type='pil', interactive=False, height=450)
             gr.Markdown("""
             ### 💡 Custom Mockup Layout Styles:
-            *   **Single Product (Centered)**: Generates a standard high-quality clean studio product presentation mockup.
-            *   **Bento Knolling Layout**: Generates a flat-lay knolling stationery arrangement with paper/plastic textures.
-            *   **Realistic Ambient Scene**: Generates lifestyle, commercial editorial photography in a real environment with soft natural lighting.
+            *   **Single Product (Centered)**: High-quality studio product presentation mockup.
+            *   **Bento Knolling Layout**: Flat-lay brand identity knolling stationery arrangement.
+            *   **Realistic Ambient Scene**: Commercial lifestyle editorial photography in an authentic setting.
+            *   **Minimalist Concrete Pedestal**: Architectural brutalist podium with gallery exhibition lighting.
+            *   **Dark Luxury Chiaroscuro**: Dramatic obsidian stone, high contrast spotlight, and gold rims.
+            *   **Urban Street Sunlight**: Authentic outdoor city atmosphere with warm golden hour reflections.
             """)
+
+    def _on_clean_logo(img):
+        if img is None:
+            return "⚠️ Please upload a logo first.", None
+        from modules.background_remover import remove_background
+        res = remove_background(img)
+        return "✅ Logo background removed cleanly!", res
+
+    clean_logo_btn.click(
+        _on_clean_logo,
+        inputs=[mockup_logo],
+        outputs=[mockup_status, mockup_logo]
+    )
 
     mockup_btn.click(
         _gen_mockup,
