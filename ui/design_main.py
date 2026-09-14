@@ -313,10 +313,27 @@ def build_tab():
             )
             prompt = gr.Textbox(
                 label='✨ Prompt',
-                placeholder='Describe your design...',
+                placeholder='Describe your design idea (e.g. japanese kimono model, coffee shop logo)...',
                 lines=3,
                 elem_id='prompt_input'
             )
+            with gr.Row():
+                ai_enhance_btn = gr.Button("🪄 ✨ Enhance Prompt with AI Copilot", size="sm", variant="secondary", elem_id="ai_enhance_btn")
+            
+            with gr.Accordion('🤖 AI Prompt Copilot Settings', open=False):
+                ai_mode_choice = gr.Radio(
+                    label="Copilot Engine",
+                    choices=["Fast Heuristic Engine", "Local Qwen2.5-0.5B (CPU)", "Cloud API (Groq / OpenAI)"],
+                    value="Fast Heuristic Engine",
+                    interactive=True,
+                )
+                ai_api_key = gr.Textbox(
+                    label="Cloud API Key (Optional)",
+                    placeholder="Enter Groq (gsk_...) or OpenAI (sk-...) key...",
+                    type="password",
+                    max_lines=1
+                )
+
             with gr.Accordion('📝 Negative Prompt', open=False):
                 negative_prompt = gr.Textbox(
                     label='Negative Prompt',
@@ -450,6 +467,18 @@ def build_tab():
         _quick_vectorize,
         inputs=[preview],
         outputs=[status, svg_download_file]
+    )
+
+    def _on_ai_enhance(p_val, cat_val, mode_val, key_val):
+        from modules.ai_copilot import enhance_prompt_with_ai
+        mode = "local" if "local" in str(mode_val).lower() else "hybrid"
+        enh_p, enh_neg = enhance_prompt_with_ai(p_val, category=cat_val, api_key=key_val, mode=mode)
+        return gr.update(value=enh_p), gr.update(value=enh_neg), "✨ Prompt enhanced by AI Copilot for commercial quality!"
+
+    ai_enhance_btn.click(
+        _on_ai_enhance,
+        inputs=[prompt, category, ai_mode_choice, ai_api_key],
+        outputs=[prompt, negative_prompt, status]
     )
 
     generate_btn.click(
