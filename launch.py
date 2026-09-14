@@ -5,6 +5,9 @@ Installs dependencies and launches the web UI.
 import os
 import sys
 import subprocess
+import warnings
+
+warnings.filterwarnings("ignore", category=UserWarning, module="gradio")
 
 root = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(root)
